@@ -250,13 +250,14 @@ const AudioEngine = (() => {
     let delayIn, delayNode, reverbIn;
     let noiseBuf = null;
     let spectrum = null;
+    let waveform = null;
 
     let trackIndex = 0;
     let playing = false;
     let step = 0;
     let nextNoteTime = 0;
     let timer = null;
-    let volume = 0.75;
+    let volume = 0.85;
     let muted = false;
 
     const handlers = { track: [], state: [] };
@@ -288,6 +289,7 @@ const AudioEngine = (() => {
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.78;
         spectrum = new Uint8Array(analyser.frequencyBinCount);
+        waveform = new Uint8Array(analyser.fftSize);
 
         master.connect(compressor);
         compressor.connect(analyser);
@@ -651,12 +653,14 @@ const AudioEngine = (() => {
     // 64-bar arc: intro → build → drop A → break → drop B → outro
 
     function sectionAt(bar) {
-        if (bar < 8)   return { kick: 0, snare: 0, hat: 1, bass: 0, lead: 1, pad: 1, fill: 0 };
-        if (bar < 16)  return { kick: 1, snare: 0, hat: 1, bass: bar >= 12, lead: 1, pad: 1, fill: bar === 15 };
-        if (bar < 32)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: (bar % 8) >= 4, pad: 0, fill: bar === 31 };
-        if (bar < 40)  return { kick: 0, snare: 0, hat: 1, bass: 0, lead: 1, pad: 1, fill: bar === 39 };
-        if (bar < 56)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: 1, pad: 1, fill: bar === 55 };
-        return { kick: bar < 60, snare: 0, hat: 1, bass: bar < 60, lead: 0, pad: 1, fill: 0 };
+        // Open with an immediate full groove so playback is unmistakably
+        // audible from the very first bar; bring in dynamics afterward.
+        if (bar < 16)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: bar >= 4, pad: 1, fill: bar === 15 };
+        if (bar < 24)  return { kick: 0, snare: 0, hat: 1, bass: 0, lead: 1, pad: 1, fill: bar === 23 }; // breakdown
+        if (bar < 28)  return { kick: 1, snare: 0, hat: 1, bass: 1, lead: 1, pad: 1, fill: bar === 27 }; // build
+        if (bar < 48)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: 1, pad: 0, fill: bar === 47 }; // main drop
+        if (bar < 56)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: (bar % 8) >= 4, pad: 1, fill: bar === 55 };
+        return { kick: 1, snare: 1, hat: 1, bass: 1, lead: 1, pad: 1, fill: false }; // full outro
     }
 
     /* ------------------------------ Scheduler ------------------------------ */
@@ -726,14 +730,25 @@ const AudioEngine = (() => {
 
     /* ------------------------------ Transport ------------------------------ */
 
-    function play() {
+    async function play() {
         init();
-        if (ctx.state === 'suspended') ctx.resume();
+        // Browsers start the AudioContext suspended until a user gesture.
+        // play() is always called from a click/tap, so resume here; await it
+        // so the first notes aren't scheduled into a stopped clock.
+        if (ctx.state === 'suspended') {
+            try { await ctx.resume(); } catch (e) { /* will retry on next gesture */ }
+        }
         if (playing) return;
         playing = true;
         nextNoteTime = ctx.currentTime + 0.06;
         timer = setInterval(scheduler, LOOKAHEAD_MS);
         emit('state', true);
+    }
+
+    // Fallback unlock: resume the context on any user gesture, in case a
+    // browser blocked the initial resume.
+    function unlock() {
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
     }
 
     function pause() {
@@ -794,12 +809,20 @@ const AudioEngine = (() => {
         return spectrum;
     }
 
+    // Time-domain samples (centered on 128). Used to confirm real waveform
+    // output — the RMS deviation from 128 is non-zero only when audio plays.
+    function getWaveform() {
+        if (!analyser) return null;
+        analyser.getByteTimeDomainData(waveform);
+        return waveform;
+    }
+
     return {
         TRACKS,
         on,
         play, pause, toggle, next, prev, setTrack, seek,
-        setVolume, toggleMute,
-        getPosition, getSpectrum,
+        setVolume, toggleMute, unlock,
+        getPosition, getSpectrum, getWaveform,
         isPlaying: () => playing,
         getVolume: () => volume,
         isMuted: () => muted,
