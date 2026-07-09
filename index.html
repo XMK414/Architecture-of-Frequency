@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Architecture of Frequency | EDM Blog</title>
+    <meta name="description" content="Dissecting electronic music's pioneers and the underground vanguard. Featuring a live in-browser synthesis engine, community archive, and deep-dive transmissions.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
+
+    <!-- Fonts: Orbitron for futuristic headers, Inter for readable body text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (with typography plugin so the `prose` article styles actually apply) -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#0a0a0f',
+                        panel: '#13131f',
+                        neon: {
+                            cyan: '#00f3ff',
+                            magenta: '#ff00ff',
+                            purple: '#b026ff',
+                            green: '#39ff14'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="antialiased selection:bg-neon-magenta selection:text-white pb-28">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-panel border-b border-white/10 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <a href="#" class="font-display font-bold text-xl tracking-wider text-white glitch-hover">
+                        <i class="fa-solid fa-wave-square text-neon-cyan mr-2"></i>FREQ<span class="text-neon-magenta">/</span>ARCH
+                    </a>
+                </div>
+                <div class="hidden lg:block">
+                    <div class="ml-10 flex items-baseline space-x-2 xl:space-x-4">
+                        <a href="#vanguard" class="text-gray-300 hover:text-neon-cyan px-2 py-2 rounded-md text-sm font-medium transition-colors">The Vanguard</a>
+                        <a href="#rabbit-hole" class="text-gray-300 hover:text-neon-purple px-2 py-2 rounded-md text-sm font-medium transition-colors">Rabbit Hole</a>
+                        <a href="#analytics" class="text-gray-300 hover:text-neon-green px-2 py-2 rounded-md text-sm font-medium transition-colors">Analytics</a>
+                        <a href="#network" class="text-gray-300 hover:text-neon-magenta px-2 py-2 rounded-md text-sm font-medium transition-colors">Mind Maps</a>
+                        <a href="#transmissions" class="text-gray-300 hover:text-neon-cyan px-2 py-2 rounded-md text-sm font-medium transition-colors">Transmissions</a>
+                        <a href="#archive" class="text-gray-300 hover:text-yellow-400 px-2 py-2 rounded-md text-sm font-medium transition-colors">The Archive</a>
+                        <a href="#comments-section" class="text-gray-300 hover:text-neon-purple px-2 py-2 rounded-md text-sm font-medium transition-colors">Feedback</a>
+                    </div>
+                </div>
+                <button id="mobile-menu-btn" class="lg:hidden text-gray-300 hover:text-neon-cyan p-2" aria-label="Toggle menu">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden lg:hidden border-t border-white/10 bg-[#0a0a0f]/95 backdrop-blur-xl">
+            <div class="px-4 py-3 space-y-1">
+                <a href="#vanguard" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-cyan hover:bg-white/5">The Vanguard</a>
+                <a href="#rabbit-hole" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-purple hover:bg-white/5">Down the Rabbit Hole</a>
+                <a href="#analytics" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-green hover:bg-white/5">Analytics</a>
+                <a href="#network" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-magenta hover:bg-white/5">Mind Maps</a>
+                <a href="#transmissions" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-cyan hover:bg-white/5">Transmissions</a>
+                <a href="#archive" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-yellow-400 hover:bg-white/5">The Living Archive</a>
+                <a href="#comments-section" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-purple hover:bg-white/5">Frequency Feedback</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-dark z-0"></div>
+        <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full border border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan text-xs font-semibold tracking-widest uppercase">
+                An Exhaustive Analysis
+            </div>
+            <h1 class="text-5xl md:text-7xl font-display font-black text-white mb-6 leading-tight tracking-tighter glow-text-cyan">
+                The Architecture <br/> of <span class="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-magenta">Frequency</span>
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto font-light">
+                Dissecting electronic music's pioneers and the underground vanguard shaping the future of sub-bass, breakbeats, and techno.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <a href="#article-start" class="px-8 py-3 rounded-md bg-neon-purple text-white font-bold tracking-wide hover:bg-neon-magenta transition-all duration-300 shadow-[0_0_15px_rgba(176,38,255,0.5)] hover:shadow-[0_0_25px_rgba(255,0,255,0.7)]">
+                    Enter the Void <i class="fa-solid fa-arrow-down ml-2"></i>
+                </a>
+                <button id="hero-play-btn" class="px-8 py-3 rounded-md border border-neon-cyan text-neon-cyan font-bold tracking-wide hover:bg-neon-cyan hover:text-dark transition-all duration-300">
+                    <i class="fa-solid fa-play mr-2"></i> Fire Up the Engine
+                </button>
+            </div>
+            <p class="mt-4 text-xs text-gray-500 font-mono tracking-wide">
+                <i class="fa-solid fa-microchip text-neon-green mr-1"></i> Every sound on this site is synthesized live in your browser — no samples, no streams.
+            </p>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12" id="article-start">
+
+        <article class="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-neon-cyan hover:prose-a:text-neon-magenta prose-a:transition-colors">
+
+            <p class="lead text-xl text-gray-300 font-light border-l-4 border-neon-magenta pl-6 my-8">
+                The electronic music continuum operates as a living, breathing ecosystem where mainstream festival headliners represent merely the surface tension of a much deeper, constantly churning ocean of underground talent. From the warehouse techno of 1990s Brooklyn to the organic bass frequencies of modern Denver, this analysis traces the phylogenetic tree of these genres.
+            </p>
+
+            <h2 id="vanguard" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-bolt text-neon-cyan mr-4"></i> 1. The Vanguard: Original Pioneers
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 not-prose">
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-cyan/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-cyan transition-colors">Architects of Low-End</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Tape B</strong> fuses old-school dubstep wobbles with 90s/00s hip-hop acapellas. <strong>CloZee</strong> and <strong>The Polish Ambassador</strong> pioneer "organic bass" and "electro-funk" utilizing world music and tribal percussion. <strong>The Glitch Mob</strong> and <strong>edIT</strong> revolutionized glitch-hop, laying groundwork for cinematic bass.
+                    </p>
+                    <div class="mt-4 text-xs text-neon-purple border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: edIT engineered underground hip-hop for Busdriver under the alias "The Con Artist".
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-magenta/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-magenta transition-colors">The Breakbeat Syndicate</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Roni Size</strong> &amp; <strong>Chase And Status</strong> rule UK DnB. <strong>Danny The Wild Child</strong> brought Chicago turntablism to 174 BPM. <strong>DJ Icey</strong> &amp; <strong>Baby Anne</strong> built the "Florida Breaks" empire. <strong>Duke Mushroom</strong> fused electronic folk, DnB, and trip-hop on <em>Warriors</em>.
+                    </p>
+                    <div class="mt-4 text-xs text-neon-magenta border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: Danny The Wild Child won a Chicago DJ battle at age 12 for a mere $50.
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-green/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-green transition-colors">Maximalist Mutations</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Rusko</strong> initiated the NA dubstep explosion with reggae-infused wobbles. <strong>Knife Party</strong> and <strong>Kill The Noise</strong> utilized razor-sharp sound design and heavy metal aesthetics to dominate the 2010s EDM boom with a mathematically abrasive sound.
+                    </p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-yellow-400/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-yellow-400 transition-colors">Foundational Architects</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Frankie Bones</strong> (originator of PLUR) &amp; <strong>Adam X</strong> pioneered Brooklyn techno and industrial intersections. <strong>DJ Dan</strong> championed West Coast Funky House, while <strong>DJ Jes One</strong> pushed Chicago ghetto house.
+                    </p>
+                    <div class="mt-4 text-xs text-yellow-400 border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: DJ Jes One operates a record store, coffee bar, and tattoo parlor in remote Northern Wisconsin.
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="rabbit-hole" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-headphones-simple text-neon-purple mr-4"></i> 2. Down the Rabbit Hole
+            </h2>
+            <p>
+                The following analysis details highly rated, heavily vetted, yet underexposed artists who share sonic DNA with the pioneers. These producers boast exceptional engagement but remain hidden from the mainstream algorithmic gaze.
+            </p>
+
+            <div id="rabbit-hole-grid" class="space-y-6 mt-8 not-prose">
+                <!-- Populated by JS -->
+            </div>
+
+            <h2 id="analytics" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-chart-line text-neon-green mr-4"></i> 3. The Analytics Framework
+            </h2>
+            <p>
+                To understand the operational scale, this framework evaluates market presence, touring history, and differentiators across the spectrum of elite global acts to niche producers.
+            </p>
+
+            <div class="overflow-x-auto rounded-xl border border-white/10 mt-6 glass-panel not-prose">
+                <table class="min-w-full text-sm text-left">
+                    <thead class="text-xs uppercase bg-black/50 text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-4">Artist</th>
+                            <th scope="col" class="px-6 py-4">Subgenre</th>
+                            <th scope="col" class="px-6 py-4">Popularity</th>
+                            <th scope="col" class="px-6 py-4">Differentiator</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5" id="analytics-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 id="network" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-diagram-project text-neon-magenta mr-4"></i> 4. Network Conceptualizations
+            </h2>
+
+            <div class="bg-gradient-to-r from-neon-purple/10 to-neon-cyan/10 border-l-4 border-neon-cyan p-6 rounded-r-xl mb-8 not-prose">
+                <h4 class="text-lg font-display text-white mb-2">The Midwest Underground Axis</h4>
+                <p class="text-sm text-gray-300 m-0">
+                    A geographic map centered on Wisconsin and Illinois. It connects <strong>DJ Jes One</strong> (Rockford/Mellen WI), <strong>DJ Dan</strong>, and <strong>Danny The Wild Child</strong>. A massive central node highlights the <em>Even Furthur</em> festival in Highbridge, WI, operated by the Drop Bass Network, which hosted early, legendary performances by these artists.
+                </p>
+            </div>
+
+            <div class="bg-gradient-to-r from-yellow-400/10 to-orange-500/10 border-l-4 border-yellow-400 p-6 rounded-r-xl mb-8 relative overflow-hidden group shadow-[0_0_15px_rgba(250,204,21,0.15)] not-prose">
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 text-yellow-400/10 group-hover:text-yellow-400/20 transition-colors transform rotate-12">
+                    <i class="fa-solid fa-robot text-9xl"></i>
+                </div>
+                <div class="relative z-10">
+                    <div class="inline-block mb-3 px-3 py-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 text-yellow-400 text-[10px] font-bold tracking-widest uppercase shadow-[0_0_10px_rgba(250,204,21,0.3)]">
+                        Legendary Milestone
+                    </div>
+                    <h4 class="text-xl font-display text-white mb-3">Ground Zero: Daft Punk at Even Furthur '96</h4>
+                    <p class="text-sm text-gray-300 m-0 leading-relaxed">
+                        No map of the Midwest electronic scene is complete without acknowledging a seismic event in global EDM history. In 1996, <strong>Kurt</strong> from the <strong>Drop Bass Network</strong> brought a recently formed French duo named <strong>Daft Punk</strong> to a muddy farm in Wisconsin for the <em>Even Furthur</em> festival.
+                        <br><br>
+                        This legendary rave marked Daft Punk's <strong>very first live performance in the United States</strong>. This visionary booking not only boosted the trajectory of one of the most iconic groups in music history but forever cemented Wisconsin's status as a foundational pillar of underground rave culture. Massive kudos to Kurt and the Drop Bass crew for their relentless dedication to pushing the boundaries of the Midwest scene.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-neon-magenta/10 to-neon-purple/10 border-l-4 border-neon-magenta p-6 rounded-r-xl not-prose">
+                <h4 class="text-lg font-display text-white mb-2">The Milwaukee Miramar Hub</h4>
+                <p class="text-sm text-gray-300 m-0">
+                    A venue-centric map focused on the historic Miramar Theatre and The Rave in Milwaukee, WI. It branches out to show historical performances by discovered artists like <strong>Gettoblaster</strong>, <strong>Uriah G</strong>, <strong>Derek Fer Real</strong>, and <strong>Mario Massa</strong>, proving the venue's status as a critical artery for Midwest dance music.
+                </p>
+            </div>
+
+        </article>
+
+        <!-- ==================== BLOG: TRANSMISSIONS ==================== -->
+        <section id="transmissions" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-3xl font-display font-bold text-white flex items-center m-0">
+                    <i class="fa-solid fa-tower-broadcast text-neon-cyan mr-4"></i> Transmissions
+                </h2>
+                <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-widest text-neon-green border border-neon-green/30 bg-neon-green/10 px-3 py-1 rounded-full">
+                    <span class="inline-block w-2 h-2 rounded-full bg-neon-green animate-pulse mr-1"></span> Broadcasting
+                </span>
+            </div>
+            <p class="text-gray-400 mb-10">Deep-dive dispatches from the archive — the stories, samples, and scenes that built this culture.</p>
+
+            <div id="blog-grid" class="grid grid-cols-1 gap-6">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== COMMUNITY: THE LIVING ARCHIVE ==================== -->
+        <section id="archive" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <h2 class="text-3xl font-display font-bold text-white mb-2 flex items-center">
+                <i class="fa-solid fa-box-archive text-yellow-400 mr-4"></i> The Living Archive
+            </h2>
+            <p class="text-gray-400 mb-8">
+                History is written by the crowd. Submit the <strong class="text-white">moments</strong> that shaped this industry, the <strong class="text-white">artists</strong> who deserve the spotlight, and the <strong class="text-white">tracks</strong> that need to be heard. Upvote what resonates — the community decides what rises.
+            </p>
+
+            <!-- Tabs -->
+            <div class="flex flex-wrap gap-2 mb-8" id="archive-tabs">
+                <button data-tab="moments" class="archive-tab active px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-clock-rotate-left mr-2"></i>Defining Moments
+                </button>
+                <button data-tab="artists" class="archive-tab px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-star mr-2"></i>Artists to Watch
+                </button>
+                <button data-tab="tracks" class="archive-tab px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-record-vinyl mr-2"></i>Essential Tracks
+                </button>
+            </div>
+
+            <!-- Submission Form -->
+            <form id="archive-form" class="glass-panel p-6 rounded-xl mb-10">
+                <h3 id="archive-form-title" class="text-sm font-display text-neon-cyan uppercase tracking-widest mb-4">Log a Defining Moment</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label id="archive-f1-label" for="archive-f1" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Moment Title *</label>
+                        <input type="text" id="archive-f1" required maxlength="120" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. The Belleville Three invent techno">
+                    </div>
+                    <div>
+                        <label id="archive-f2-label" for="archive-f2" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Year</label>
+                        <input type="text" id="archive-f2" maxlength="60" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. 1985">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label id="archive-text-label" for="archive-text" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Why It Mattered *</label>
+                    <textarea id="archive-text" rows="3" required maxlength="600" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors resize-none" placeholder="Tell the story..."></textarea>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-end">
+                    <div class="flex-grow">
+                        <label for="archive-handle" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Your Handle</label>
+                        <input type="text" id="archive-handle" maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="Anonymous Raver">
+                    </div>
+                    <button type="submit" class="px-6 py-2 bg-transparent border border-yellow-400 text-yellow-400 font-bold rounded hover:bg-yellow-400 hover:text-dark transition-all duration-300 uppercase tracking-widest text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-upload mr-2"></i>Commit to Archive
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-3 mb-0 font-mono"><i class="fa-solid fa-hard-drive mr-1"></i> Entries are stored in your browser (localStorage) — this is a static site with no backend.</p>
+            </form>
+
+            <!-- Archive list -->
+            <div id="archive-list" class="space-y-4">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== COMMENTS ==================== -->
+        <section id="comments-section" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <h3 class="text-2xl font-display font-bold text-white mb-8 flex items-center">
+                <i class="fa-regular fa-comments text-neon-cyan mr-3"></i> Frequency Feedback
+                <span id="comment-count" class="ml-3 text-xs font-mono text-gray-500 border border-white/10 rounded-full px-3 py-1"></span>
+            </h3>
+
+            <!-- Comment Form -->
+            <form id="comment-form" class="glass-panel p-6 rounded-xl mb-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="c-name" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">User Handle *</label>
+                        <input type="text" id="c-name" required maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. BassHead99">
+                    </div>
+                    <div>
+                        <label for="c-genre" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Favorite Subgenre</label>
+                        <input type="text" id="c-genre" maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. Florida Breaks">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="c-text" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Transmission *</label>
+                    <textarea id="c-text" rows="3" required maxlength="600" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors resize-none" placeholder="Drop your thoughts..."></textarea>
+                </div>
+                <button type="submit" class="w-full md:w-auto px-6 py-2 bg-transparent border border-neon-cyan text-neon-cyan font-bold rounded hover:bg-neon-cyan hover:text-dark transition-all duration-300 uppercase tracking-widest text-sm">
+                    Initialize Upload
+                </button>
+            </form>
+
+            <!-- Comments List -->
+            <div id="comments-list" class="space-y-6">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-20 border-t border-white/10 pt-10 pb-8 text-center">
+            <p class="font-display text-sm text-gray-400 tracking-widest">FREQ<span class="text-neon-magenta">/</span>ARCH — THE ARCHITECTURE OF FREQUENCY</p>
+            <p class="text-xs text-gray-600 mt-2 font-mono">
+                Audio rendered live via the Web Audio API. No samples. No streams. Pure synthesis.<br>
+                Community data persists in your browser's localStorage.
+            </p>
+        </footer>
+
+    </main>
+
+    <!-- ==================== AUDIO PLAYER ==================== -->
+    <div class="fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 z-50 p-2 sm:p-4 backdrop-blur-xl bg-[#0a0a0f]/90" id="audio-player">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+
+            <!-- Track Info -->
+            <div class="flex items-center w-full sm:w-1/3 min-w-0">
+                <div class="w-12 h-12 flex-shrink-0 bg-gradient-to-br from-neon-purple to-neon-cyan rounded-md flex items-center justify-center shadow-[0_0_10px_rgba(0,243,255,0.3)] relative overflow-hidden">
+                    <i class="fa-solid fa-music text-white text-xl z-10"></i>
+                    <!-- Real-time visualizer bars inside cover art -->
+                    <div class="absolute bottom-0 w-full h-full flex items-end justify-center gap-[2px] opacity-60" id="mini-viz">
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                    </div>
+                </div>
+                <div class="ml-4 truncate">
+                    <h4 class="text-sm font-bold text-white truncate" id="track-title">—</h4>
+                    <p class="text-xs text-neon-cyan truncate" id="track-genre">—</p>
+                </div>
+                <span id="engine-badge" class="hidden md:inline-block ml-3 flex-shrink-0 text-[9px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-2 py-1 rounded-full transition-colors">SYNTH: IDLE</span>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex flex-col items-center w-full sm:w-1/3">
+                <div class="flex items-center gap-6 mb-2">
+                    <button class="text-gray-400 hover:text-white transition-colors" id="btn-prev" aria-label="Previous track"><i class="fa-solid fa-backward-step"></i></button>
+                    <button class="w-10 h-10 rounded-full bg-white text-dark flex items-center justify-center hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all" id="btn-play" aria-label="Play or pause">
+                        <i class="fa-solid fa-play ml-1" id="play-icon"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition-colors" id="btn-next" aria-label="Next track"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+                    <span id="time-current">0:00</span>
+                    <div class="flex-grow h-2 bg-gray-800 rounded-full overflow-hidden cursor-pointer relative group" id="progress-container">
+                        <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-neon-cyan to-neon-purple w-0" id="progress-bar"></div>
+                    </div>
+                    <span id="time-total">0:00</span>
+                </div>
+            </div>
+
+            <!-- Volume / Playlist -->
+            <div class="flex justify-end w-full sm:w-1/3 items-center gap-4 text-gray-400">
+                <button id="btn-mute" class="hover:text-white transition-colors" aria-label="Mute"><i class="fa-solid fa-volume-high text-sm" id="vol-icon"></i></button>
+                <div class="w-20 h-2 bg-gray-800 rounded-full cursor-pointer relative" id="volume-container">
+                    <div class="h-full bg-white rounded-full pointer-events-none" id="volume-bar" style="width:75%"></div>
+                </div>
+                <button id="btn-playlist" class="hover:text-neon-cyan transition-colors ml-2 relative" aria-label="Playlist">
+                    <i class="fa-solid fa-list-ul"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Playlist Dropup -->
+        <div id="playlist-menu" class="absolute bottom-full right-0 sm:right-4 mb-2 w-full sm:w-96 glass-panel rounded-xl p-4 hidden border border-white/10 shadow-2xl">
+            <h4 class="text-xs font-display text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2 mb-2">
+                <i class="fa-solid fa-microchip text-neon-green mr-1"></i> Generative Sessions — Synthesized Live
+            </h4>
+            <ul class="space-y-1 text-sm max-h-64 overflow-y-auto" id="playlist-list">
+                <!-- Populated by JS -->
+            </ul>
+            <p class="text-[10px] text-gray-500 font-mono mt-3 mb-0 border-t border-white/10 pt-2">
+                Original compositions generated in real time by the FREQ/ARCH engine, each a tribute to a genre covered in this analysis.
+            </p>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- App -->
+    <script src="js/data.js"></script>
+    <script src="js/audio-engine.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
