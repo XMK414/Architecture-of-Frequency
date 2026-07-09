@@ -366,6 +366,16 @@
             highlightPlaylistItem(AudioEngine.currentIndex());
         });
 
+        // Resume the audio context on the first user interaction anywhere,
+        // as a fallback for browsers that block the initial resume().
+        const unlockOnce = () => {
+            AudioEngine.unlock();
+            document.removeEventListener('pointerdown', unlockOnce);
+            document.removeEventListener('keydown', unlockOnce);
+        };
+        document.addEventListener('pointerdown', unlockOnce);
+        document.addEventListener('keydown', unlockOnce);
+
         $('btn-play').addEventListener('click', () => AudioEngine.toggle());
         $('btn-prev').addEventListener('click', () => AudioEngine.prev());
         $('btn-next').addEventListener('click', () => AudioEngine.next());

@@ -29,10 +29,18 @@ To make submissions **shared across all visitors**, connect a free Supabase proj
 
 ## Hosting on GitHub Pages
 
-This repo includes `.github/workflows/deploy-pages.yml`. Once the branch is merged to `main`:
+The site is plain static files at the repo root, so the simplest and most
+reliable option is **branch-based Pages** (no Actions workflow required):
 
-- The workflow runs and (via `configure-pages` with `enablement: true`) attempts to **turn Pages on automatically** and deploy. Check **Actions** for the run and the resulting URL.
-- If automatic enablement is blocked by org settings, enable it manually in **Settings → Pages → Build and deployment → Source: GitHub Actions** (or "Deploy from a branch → main → /root"), then re-run the workflow.
+1. Go to **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+3. Set **Branch: `main`** and **Folder: `/ (root)`**, then **Save**.
+4. Wait ~1 minute — the site goes live at
+   `https://xmk414.github.io/Architecture-of-Frequency/`.
+
+This mode **auto-updates**: every push to `main` triggers GitHub's built-in
+Pages rebuild, so future changes publish automatically. The repo includes a
+`.nojekyll` file so GitHub serves the files as-is without Jekyll processing.
 
 ## Running locally
 
@@ -56,6 +64,6 @@ js/store.js                      data layer (Supabase cloud or localStorage)
 js/audio-engine.js               Web Audio generative music engine
 js/visualizer.js                 audio-reactive Three.js background
 js/app.js                        UI wiring, blog/archive/comments rendering
-.github/workflows/deploy-pages.yml   GitHub Pages auto-deploy
+.nojekyll                        serve files as-is on GitHub Pages
 SUPABASE.md                      shared-backend setup guide
 ```
