@@ -1,0 +1,166 @@
+/* FREQ/ARCH — The Architecture of Frequency */
+
+body {
+    background-color: #0a0a0f;
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
+
+/* Custom Scrollbar for Cyberpunk Feel */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0a0a0f;
+}
+::-webkit-scrollbar-thumb {
+    background: #b026ff;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #ff00ff;
+}
+
+/* Neon Text Glow */
+.glow-text-cyan {
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
+}
+.glow-text-magenta {
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5);
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+    background: rgba(19, 19, 31, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Glitch Effect on Hover for Links/Buttons */
+.glitch-hover {
+    position: relative;
+    transition: all 0.3s ease;
+}
+.glitch-hover:hover {
+    color: #00f3ff;
+    text-shadow: 2px 0 #ff00ff, -2px 0 #39ff14;
+    animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+}
+
+@keyframes glitch-skew {
+    0% { transform: skew(0deg); }
+    20% { transform: skew(-10deg); }
+    40% { transform: skew(10deg); }
+    60% { transform: skew(-5deg); }
+    80% { transform: skew(5deg); }
+    100% { transform: skew(0deg); }
+}
+
+/* 3D Canvas Background */
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Mini visualizer bars (heights driven by the real analyser in JS) */
+#mini-viz div {
+    transition: height 0.08s ease-out;
+}
+
+/* Archive tabs */
+.archive-tab {
+    color: #9ca3af;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+}
+.archive-tab:hover {
+    color: #fff;
+    border-color: rgba(250, 204, 21, 0.4);
+}
+.archive-tab.active {
+    color: #facc15;
+    border-color: rgba(250, 204, 21, 0.6);
+    background: rgba(250, 204, 21, 0.1);
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.15);
+}
+
+/* Vote buttons */
+.vote-btn {
+    transition: all 0.2s ease;
+}
+.vote-btn:hover:not(.voted) {
+    color: #00f3ff;
+    border-color: rgba(0, 243, 255, 0.5);
+    transform: translateY(-2px);
+}
+.vote-btn.voted {
+    color: #39ff14;
+    border-color: rgba(57, 255, 20, 0.5);
+    background: rgba(57, 255, 20, 0.08);
+    cursor: default;
+}
+
+/* Blog post expand/collapse */
+.blog-body {
+    display: none;
+}
+.blog-card.open .blog-body {
+    display: block;
+    animation: fade-slide-in 0.4s ease both;
+}
+.blog-card.open .blog-toggle-icon {
+    transform: rotate(180deg);
+}
+.blog-toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+@keyframes fade-slide-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* New item flash when a submission lands */
+@keyframes archive-flash {
+    0% { border-color: rgba(57, 255, 20, 0.8); box-shadow: 0 0 20px rgba(57, 255, 20, 0.3); }
+    100% { border-color: rgba(255, 255, 255, 0.05); box-shadow: none; }
+}
+.archive-flash {
+    animation: archive-flash 1.6s ease-out both;
+}
+
+/* Playing indicator equalizer in playlist */
+.eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    width: 16px;
+}
+.eq span {
+    width: 3px;
+    background: #00f3ff;
+    animation: eq-bounce 0.8s infinite ease-in-out alternate;
+}
+.eq span:nth-child(2) { animation-delay: 0.2s; }
+.eq span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes eq-bounce {
+    from { height: 3px; }
+    to { height: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .glitch-hover:hover,
+    .eq span {
+        animation: none;
+    }
+}
