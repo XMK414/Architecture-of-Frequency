@@ -1,0 +1,2351 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Architecture of Frequency | EDM Blog</title>
+    <meta name="description" content="Dissecting electronic music's pioneers and the underground vanguard. Featuring a live in-browser synthesis engine, community archive, and deep-dive transmissions.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
+
+    <!-- Fonts: Orbitron for futuristic headers, Inter for readable body text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (with typography plugin so the `prose` article styles actually apply) -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        window.tailwind = window.tailwind || {};
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#0a0a0f',
+                        panel: '#13131f',
+                        neon: {
+                            cyan: '#00f3ff',
+                            magenta: '#ff00ff',
+                            purple: '#b026ff',
+                            green: '#39ff14'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+/* FREQ/ARCH — The Architecture of Frequency */
+
+body {
+    background-color: #0a0a0f;
+    color: #e2e8f0;
+    overflow-x: hidden;
+}
+
+/* Custom Scrollbar for Cyberpunk Feel */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #0a0a0f;
+}
+::-webkit-scrollbar-thumb {
+    background: #b026ff;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #ff00ff;
+}
+
+/* Neon Text Glow */
+.glow-text-cyan {
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5);
+}
+.glow-text-magenta {
+    text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5);
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+    background: rgba(19, 19, 31, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Glitch Effect on Hover for Links/Buttons */
+.glitch-hover {
+    position: relative;
+    transition: all 0.3s ease;
+}
+.glitch-hover:hover {
+    color: #00f3ff;
+    text-shadow: 2px 0 #ff00ff, -2px 0 #39ff14;
+    animation: glitch-skew 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+}
+
+@keyframes glitch-skew {
+    0% { transform: skew(0deg); }
+    20% { transform: skew(-10deg); }
+    40% { transform: skew(10deg); }
+    60% { transform: skew(-5deg); }
+    80% { transform: skew(5deg); }
+    100% { transform: skew(0deg); }
+}
+
+/* 3D Canvas Background */
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* Mini visualizer bars (heights driven by the real analyser in JS) */
+#mini-viz div {
+    transition: height 0.08s ease-out;
+}
+
+/* Archive tabs */
+.archive-tab {
+    color: #9ca3af;
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
+}
+.archive-tab:hover {
+    color: #fff;
+    border-color: rgba(250, 204, 21, 0.4);
+}
+.archive-tab.active {
+    color: #facc15;
+    border-color: rgba(250, 204, 21, 0.6);
+    background: rgba(250, 204, 21, 0.1);
+    box-shadow: 0 0 12px rgba(250, 204, 21, 0.15);
+}
+
+/* Vote buttons */
+.vote-btn {
+    transition: all 0.2s ease;
+}
+.vote-btn:hover:not(.voted) {
+    color: #00f3ff;
+    border-color: rgba(0, 243, 255, 0.5);
+    transform: translateY(-2px);
+}
+.vote-btn.voted {
+    color: #39ff14;
+    border-color: rgba(57, 255, 20, 0.5);
+    background: rgba(57, 255, 20, 0.08);
+    cursor: default;
+}
+
+/* Blog post expand/collapse */
+.blog-body {
+    display: none;
+}
+.blog-card.open .blog-body {
+    display: block;
+    animation: fade-slide-in 0.4s ease both;
+}
+.blog-card.open .blog-toggle-icon {
+    transform: rotate(180deg);
+}
+.blog-toggle-icon {
+    transition: transform 0.3s ease;
+}
+
+@keyframes fade-slide-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* New item flash when a submission lands */
+@keyframes archive-flash {
+    0% { border-color: rgba(57, 255, 20, 0.8); box-shadow: 0 0 20px rgba(57, 255, 20, 0.3); }
+    100% { border-color: rgba(255, 255, 255, 0.05); box-shadow: none; }
+}
+.archive-flash {
+    animation: archive-flash 1.6s ease-out both;
+}
+
+/* Playing indicator equalizer in playlist */
+.eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+    width: 16px;
+}
+.eq span {
+    width: 3px;
+    background: #00f3ff;
+    animation: eq-bounce 0.8s infinite ease-in-out alternate;
+}
+.eq span:nth-child(2) { animation-delay: 0.2s; }
+.eq span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes eq-bounce {
+    from { height: 3px; }
+    to { height: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .glitch-hover:hover,
+    .eq span {
+        animation: none;
+    }
+}
+
+    </style>
+</head>
+<body class="antialiased selection:bg-neon-magenta selection:text-white pb-28">
+
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass-panel border-b border-white/10 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <a href="#" class="font-display font-bold text-xl tracking-wider text-white glitch-hover">
+                        <i class="fa-solid fa-wave-square text-neon-cyan mr-2"></i>FREQ<span class="text-neon-magenta">/</span>ARCH
+                    </a>
+                </div>
+                <div class="hidden lg:block">
+                    <div class="ml-10 flex items-baseline space-x-2 xl:space-x-4">
+                        <a href="#vanguard" class="text-gray-300 hover:text-neon-cyan px-2 py-2 rounded-md text-sm font-medium transition-colors">The Vanguard</a>
+                        <a href="#rabbit-hole" class="text-gray-300 hover:text-neon-purple px-2 py-2 rounded-md text-sm font-medium transition-colors">Rabbit Hole</a>
+                        <a href="#analytics" class="text-gray-300 hover:text-neon-green px-2 py-2 rounded-md text-sm font-medium transition-colors">Analytics</a>
+                        <a href="#network" class="text-gray-300 hover:text-neon-magenta px-2 py-2 rounded-md text-sm font-medium transition-colors">Mind Maps</a>
+                        <a href="#transmissions" class="text-gray-300 hover:text-neon-cyan px-2 py-2 rounded-md text-sm font-medium transition-colors">Transmissions</a>
+                        <a href="#archive" class="text-gray-300 hover:text-yellow-400 px-2 py-2 rounded-md text-sm font-medium transition-colors">The Archive</a>
+                        <a href="#comments-section" class="text-gray-300 hover:text-neon-purple px-2 py-2 rounded-md text-sm font-medium transition-colors">Feedback</a>
+                    </div>
+                </div>
+                <button id="mobile-menu-btn" class="lg:hidden text-gray-300 hover:text-neon-cyan p-2" aria-label="Toggle menu">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden lg:hidden border-t border-white/10 bg-[#0a0a0f]/95 backdrop-blur-xl">
+            <div class="px-4 py-3 space-y-1">
+                <a href="#vanguard" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-cyan hover:bg-white/5">The Vanguard</a>
+                <a href="#rabbit-hole" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-purple hover:bg-white/5">Down the Rabbit Hole</a>
+                <a href="#analytics" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-green hover:bg-white/5">Analytics</a>
+                <a href="#network" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-magenta hover:bg-white/5">Mind Maps</a>
+                <a href="#transmissions" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-cyan hover:bg-white/5">Transmissions</a>
+                <a href="#archive" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-yellow-400 hover:bg-white/5">The Living Archive</a>
+                <a href="#comments-section" class="mobile-link block px-3 py-2 rounded-md text-gray-300 hover:text-neon-purple hover:bg-white/5">Frequency Feedback</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-dark z-0"></div>
+        <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full border border-neon-cyan/30 bg-neon-cyan/10 text-neon-cyan text-xs font-semibold tracking-widest uppercase">
+                An Exhaustive Analysis
+            </div>
+            <h1 class="text-5xl md:text-7xl font-display font-black text-white mb-6 leading-tight tracking-tighter glow-text-cyan">
+                The Architecture <br/> of <span class="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-magenta">Frequency</span>
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto font-light">
+                Dissecting electronic music's pioneers and the underground vanguard shaping the future of sub-bass, breakbeats, and techno.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <a href="#article-start" class="px-8 py-3 rounded-md bg-neon-purple text-white font-bold tracking-wide hover:bg-neon-magenta transition-all duration-300 shadow-[0_0_15px_rgba(176,38,255,0.5)] hover:shadow-[0_0_25px_rgba(255,0,255,0.7)]">
+                    Enter the Void <i class="fa-solid fa-arrow-down ml-2"></i>
+                </a>
+                <button id="hero-play-btn" class="px-8 py-3 rounded-md border border-neon-cyan text-neon-cyan font-bold tracking-wide hover:bg-neon-cyan hover:text-dark transition-all duration-300">
+                    <i class="fa-solid fa-play mr-2"></i> Fire Up the Engine
+                </button>
+            </div>
+            <p class="mt-4 text-xs text-gray-500 font-mono tracking-wide">
+                <i class="fa-solid fa-microchip text-neon-green mr-1"></i> Every sound on this site is synthesized live in your browser — no samples, no streams.
+            </p>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12" id="article-start">
+
+        <article class="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-a:text-neon-cyan hover:prose-a:text-neon-magenta prose-a:transition-colors">
+
+            <p class="lead text-xl text-gray-300 font-light border-l-4 border-neon-magenta pl-6 my-8">
+                The electronic music continuum operates as a living, breathing ecosystem where mainstream festival headliners represent merely the surface tension of a much deeper, constantly churning ocean of underground talent. From the warehouse techno of 1990s Brooklyn to the organic bass frequencies of modern Denver, this analysis traces the phylogenetic tree of these genres.
+            </p>
+
+            <h2 id="vanguard" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-bolt text-neon-cyan mr-4"></i> 1. The Vanguard: Original Pioneers
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 not-prose">
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-cyan/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-cyan transition-colors">Architects of Low-End</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Tape B</strong> fuses old-school dubstep wobbles with 90s/00s hip-hop acapellas. <strong>CloZee</strong> and <strong>The Polish Ambassador</strong> pioneer "organic bass" and "electro-funk" utilizing world music and tribal percussion. <strong>The Glitch Mob</strong> and <strong>edIT</strong> revolutionized glitch-hop, laying groundwork for cinematic bass.
+                    </p>
+                    <div class="mt-4 text-xs text-neon-purple border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: edIT engineered underground hip-hop for Busdriver under the alias "The Con Artist".
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-magenta/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-magenta transition-colors">The Breakbeat Syndicate</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Roni Size</strong> &amp; <strong>Chase And Status</strong> rule UK DnB. <strong>Danny The Wild Child</strong> brought Chicago turntablism to 174 BPM. <strong>DJ Icey</strong> &amp; <strong>Baby Anne</strong> built the "Florida Breaks" empire. <strong>Duke Mushroom</strong> fused electronic folk, DnB, and trip-hop on <em>Warriors</em>.
+                    </p>
+                    <div class="mt-4 text-xs text-neon-magenta border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: Danny The Wild Child won a Chicago DJ battle at age 12 for a mere $50.
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-neon-green/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-neon-green transition-colors">Maximalist Mutations</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Rusko</strong> initiated the NA dubstep explosion with reggae-infused wobbles. <strong>Knife Party</strong> and <strong>Kill The Noise</strong> utilized razor-sharp sound design and heavy metal aesthetics to dominate the 2010s EDM boom with a mathematically abrasive sound.
+                    </p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl hover:border-yellow-400/50 transition-colors group">
+                    <h3 class="text-xl font-display text-white mt-0 mb-3 group-hover:text-yellow-400 transition-colors">Foundational Architects</h3>
+                    <p class="text-sm text-gray-400 mb-0">
+                        <strong>Frankie Bones</strong> (originator of PLUR) &amp; <strong>Adam X</strong> pioneered Brooklyn techno and industrial intersections. <strong>DJ Dan</strong> championed West Coast Funky House, while <strong>DJ Jes One</strong> pushed Chicago ghetto house.
+                    </p>
+                    <div class="mt-4 text-xs text-yellow-400 border-t border-white/10 pt-2">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Trivia: DJ Jes One operates a record store, coffee bar, and tattoo parlor in remote Northern Wisconsin.
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="rabbit-hole" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-headphones-simple text-neon-purple mr-4"></i> 2. Down the Rabbit Hole
+            </h2>
+            <p>
+                The following analysis details highly rated, heavily vetted, yet underexposed artists who share sonic DNA with the pioneers. These producers boast exceptional engagement but remain hidden from the mainstream algorithmic gaze.
+            </p>
+
+            <div id="rabbit-hole-grid" class="space-y-6 mt-8 not-prose">
+                <!-- Populated by JS -->
+            </div>
+
+            <h2 id="analytics" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-chart-line text-neon-green mr-4"></i> 3. The Analytics Framework
+            </h2>
+            <p>
+                To understand the operational scale, this framework evaluates market presence, touring history, and differentiators across the spectrum of elite global acts to niche producers.
+            </p>
+
+            <div class="overflow-x-auto rounded-xl border border-white/10 mt-6 glass-panel not-prose">
+                <table class="min-w-full text-sm text-left">
+                    <thead class="text-xs uppercase bg-black/50 text-gray-400">
+                        <tr>
+                            <th scope="col" class="px-6 py-4">Artist</th>
+                            <th scope="col" class="px-6 py-4">Subgenre</th>
+                            <th scope="col" class="px-6 py-4">Popularity</th>
+                            <th scope="col" class="px-6 py-4">Differentiator</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5" id="analytics-tbody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 id="network" class="scroll-mt-24 text-3xl border-b border-white/10 pb-4 mt-16 mb-8 flex items-center">
+                <i class="fa-solid fa-diagram-project text-neon-magenta mr-4"></i> 4. Network Conceptualizations
+            </h2>
+
+            <div class="bg-gradient-to-r from-neon-purple/10 to-neon-cyan/10 border-l-4 border-neon-cyan p-6 rounded-r-xl mb-8 not-prose">
+                <h4 class="text-lg font-display text-white mb-2">The Midwest Underground Axis</h4>
+                <p class="text-sm text-gray-300 m-0">
+                    A geographic map centered on Wisconsin and Illinois. It connects <strong>DJ Jes One</strong> (Rockford/Mellen WI), <strong>DJ Dan</strong>, and <strong>Danny The Wild Child</strong>. A massive central node highlights the <em>Even Furthur</em> festival in Highbridge, WI, operated by the Drop Bass Network, which hosted early, legendary performances by these artists.
+                </p>
+            </div>
+
+            <div class="bg-gradient-to-r from-yellow-400/10 to-orange-500/10 border-l-4 border-yellow-400 p-6 rounded-r-xl mb-8 relative overflow-hidden group shadow-[0_0_15px_rgba(250,204,21,0.15)] not-prose">
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 text-yellow-400/10 group-hover:text-yellow-400/20 transition-colors transform rotate-12">
+                    <i class="fa-solid fa-robot text-9xl"></i>
+                </div>
+                <div class="relative z-10">
+                    <div class="inline-block mb-3 px-3 py-1 rounded-full border border-yellow-400/50 bg-yellow-400/20 text-yellow-400 text-[10px] font-bold tracking-widest uppercase shadow-[0_0_10px_rgba(250,204,21,0.3)]">
+                        Legendary Milestone
+                    </div>
+                    <h4 class="text-xl font-display text-white mb-3">Ground Zero: Daft Punk at Even Furthur '96</h4>
+                    <p class="text-sm text-gray-300 m-0 leading-relaxed">
+                        No map of the Midwest electronic scene is complete without acknowledging a seismic event in global EDM history. In 1996, <strong>Kurt</strong> from the <strong>Drop Bass Network</strong> brought a recently formed French duo named <strong>Daft Punk</strong> to a muddy farm in Wisconsin for the <em>Even Furthur</em> festival.
+                        <br><br>
+                        This legendary rave marked Daft Punk's <strong>very first live performance in the United States</strong>. This visionary booking not only boosted the trajectory of one of the most iconic groups in music history but forever cemented Wisconsin's status as a foundational pillar of underground rave culture. Massive kudos to Kurt and the Drop Bass crew for their relentless dedication to pushing the boundaries of the Midwest scene.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-gradient-to-r from-neon-magenta/10 to-neon-purple/10 border-l-4 border-neon-magenta p-6 rounded-r-xl not-prose">
+                <h4 class="text-lg font-display text-white mb-2">The Milwaukee Miramar Hub</h4>
+                <p class="text-sm text-gray-300 m-0">
+                    A venue-centric map focused on the historic Miramar Theatre and The Rave in Milwaukee, WI. It branches out to show historical performances by discovered artists like <strong>Gettoblaster</strong>, <strong>Uriah G</strong>, <strong>Derek Fer Real</strong>, and <strong>Mario Massa</strong>, proving the venue's status as a critical artery for Midwest dance music.
+                </p>
+            </div>
+
+        </article>
+
+        <!-- ==================== BLOG: TRANSMISSIONS ==================== -->
+        <section id="transmissions" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-3xl font-display font-bold text-white flex items-center m-0">
+                    <i class="fa-solid fa-tower-broadcast text-neon-cyan mr-4"></i> Transmissions
+                </h2>
+                <span class="hidden sm:inline-block text-[10px] font-mono uppercase tracking-widest text-neon-green border border-neon-green/30 bg-neon-green/10 px-3 py-1 rounded-full">
+                    <span class="inline-block w-2 h-2 rounded-full bg-neon-green animate-pulse mr-1"></span> Broadcasting
+                </span>
+            </div>
+            <p class="text-gray-400 mb-10">Deep-dive dispatches from the archive — the stories, samples, and scenes that built this culture.</p>
+
+            <div id="blog-grid" class="grid grid-cols-1 gap-6">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== COMMUNITY: THE LIVING ARCHIVE ==================== -->
+        <section id="archive" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <h2 class="text-3xl font-display font-bold text-white mb-2 flex items-center flex-wrap">
+                <i class="fa-solid fa-box-archive text-yellow-400 mr-4"></i> The Living Archive
+                <span id="archive-mode" class="ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full"></span>
+            </h2>
+            <p class="text-gray-400 mb-8">
+                History is written by the crowd. Submit the <strong class="text-white">moments</strong> that shaped this industry, the <strong class="text-white">artists</strong> who deserve the spotlight, and the <strong class="text-white">tracks</strong> that need to be heard. Upvote what resonates — the community decides what rises.
+            </p>
+
+            <!-- Tabs -->
+            <div class="flex flex-wrap gap-2 mb-8" id="archive-tabs">
+                <button data-tab="moments" class="archive-tab active px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-clock-rotate-left mr-2"></i>Defining Moments
+                </button>
+                <button data-tab="artists" class="archive-tab px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-star mr-2"></i>Artists to Watch
+                </button>
+                <button data-tab="tracks" class="archive-tab px-5 py-2 rounded-full text-sm font-bold tracking-wide border transition-all">
+                    <i class="fa-solid fa-record-vinyl mr-2"></i>Essential Tracks
+                </button>
+            </div>
+
+            <!-- Submission Form -->
+            <form id="archive-form" class="glass-panel p-6 rounded-xl mb-10">
+                <h3 id="archive-form-title" class="text-sm font-display text-neon-cyan uppercase tracking-widest mb-4">Log a Defining Moment</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label id="archive-f1-label" for="archive-f1" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Moment Title *</label>
+                        <input type="text" id="archive-f1" required maxlength="120" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. The Belleville Three invent techno">
+                    </div>
+                    <div>
+                        <label id="archive-f2-label" for="archive-f2" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Year</label>
+                        <input type="text" id="archive-f2" maxlength="60" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. 1985">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label id="archive-text-label" for="archive-text" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Why It Mattered *</label>
+                    <textarea id="archive-text" rows="3" required maxlength="600" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors resize-none" placeholder="Tell the story..."></textarea>
+                </div>
+                <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-end">
+                    <div class="flex-grow">
+                        <label for="archive-handle" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Your Handle</label>
+                        <input type="text" id="archive-handle" maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="Anonymous Raver">
+                    </div>
+                    <button type="submit" class="px-6 py-2 bg-transparent border border-yellow-400 text-yellow-400 font-bold rounded hover:bg-yellow-400 hover:text-dark transition-all duration-300 uppercase tracking-widest text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-upload mr-2"></i>Commit to Archive
+                    </button>
+                </div>
+                <p class="text-[11px] text-gray-500 mt-3 mb-0 font-mono"><i class="fa-solid fa-hard-drive mr-1"></i> Entries are stored in your browser (localStorage) — this is a static site with no backend.</p>
+            </form>
+
+            <!-- Archive list -->
+            <div id="archive-list" class="space-y-4">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== COMMENTS ==================== -->
+        <section id="comments-section" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
+            <h3 class="text-2xl font-display font-bold text-white mb-8 flex items-center">
+                <i class="fa-regular fa-comments text-neon-cyan mr-3"></i> Frequency Feedback
+                <span id="comment-count" class="ml-3 text-xs font-mono text-gray-500 border border-white/10 rounded-full px-3 py-1"></span>
+                <span id="comments-mode" class="ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full"></span>
+            </h3>
+
+            <!-- Comment Form -->
+            <form id="comment-form" class="glass-panel p-6 rounded-xl mb-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="c-name" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">User Handle *</label>
+                        <input type="text" id="c-name" required maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. BassHead99">
+                    </div>
+                    <div>
+                        <label for="c-genre" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Favorite Subgenre</label>
+                        <input type="text" id="c-genre" maxlength="40" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors" placeholder="e.g. Florida Breaks">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="c-text" class="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Transmission *</label>
+                    <textarea id="c-text" rows="3" required maxlength="600" class="w-full bg-black/40 border border-white/10 rounded-md py-2 px-3 text-white focus:outline-none focus:border-neon-cyan focus:ring-1 focus:ring-neon-cyan transition-colors resize-none" placeholder="Drop your thoughts..."></textarea>
+                </div>
+                <button type="submit" class="w-full md:w-auto px-6 py-2 bg-transparent border border-neon-cyan text-neon-cyan font-bold rounded hover:bg-neon-cyan hover:text-dark transition-all duration-300 uppercase tracking-widest text-sm">
+                    Initialize Upload
+                </button>
+            </form>
+
+            <!-- Comments List -->
+            <div id="comments-list" class="space-y-6">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="mt-20 border-t border-white/10 pt-10 pb-8 text-center">
+            <p class="font-display text-sm text-gray-400 tracking-widest">FREQ<span class="text-neon-magenta">/</span>ARCH — THE ARCHITECTURE OF FREQUENCY</p>
+            <p class="text-xs text-gray-600 mt-2 font-mono">
+                Audio rendered live via the Web Audio API. No samples. No streams. Pure synthesis.<br>
+                Community data persists in your browser's localStorage.
+            </p>
+        </footer>
+
+    </main>
+
+    <!-- ==================== AUDIO PLAYER ==================== -->
+    <div class="fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 z-50 p-2 sm:p-4 backdrop-blur-xl bg-[#0a0a0f]/90" id="audio-player">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+
+            <!-- Track Info -->
+            <div class="flex items-center w-full sm:w-1/3 min-w-0">
+                <div class="w-12 h-12 flex-shrink-0 bg-gradient-to-br from-neon-purple to-neon-cyan rounded-md flex items-center justify-center shadow-[0_0_10px_rgba(0,243,255,0.3)] relative overflow-hidden">
+                    <i class="fa-solid fa-music text-white text-xl z-10"></i>
+                    <!-- Real-time visualizer bars inside cover art -->
+                    <div class="absolute bottom-0 w-full h-full flex items-end justify-center gap-[2px] opacity-60" id="mini-viz">
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                        <div class="w-1 bg-white rounded-t" style="height:10%"></div>
+                    </div>
+                </div>
+                <div class="ml-4 truncate">
+                    <h4 class="text-sm font-bold text-white truncate" id="track-title">—</h4>
+                    <p class="text-xs text-neon-cyan truncate" id="track-genre">—</p>
+                </div>
+                <span id="engine-badge" class="hidden md:inline-block ml-3 flex-shrink-0 text-[9px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-2 py-1 rounded-full transition-colors">SYNTH: IDLE</span>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex flex-col items-center w-full sm:w-1/3">
+                <div class="flex items-center gap-6 mb-2">
+                    <button class="text-gray-400 hover:text-white transition-colors" id="btn-prev" aria-label="Previous track"><i class="fa-solid fa-backward-step"></i></button>
+                    <button class="w-10 h-10 rounded-full bg-white text-dark flex items-center justify-center hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all" id="btn-play" aria-label="Play or pause">
+                        <i class="fa-solid fa-play ml-1" id="play-icon"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white transition-colors" id="btn-next" aria-label="Next track"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+                    <span id="time-current">0:00</span>
+                    <div class="flex-grow h-2 bg-gray-800 rounded-full overflow-hidden cursor-pointer relative group" id="progress-container">
+                        <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-neon-cyan to-neon-purple w-0" id="progress-bar"></div>
+                    </div>
+                    <span id="time-total">0:00</span>
+                </div>
+            </div>
+
+            <!-- Volume / Playlist -->
+            <div class="flex justify-end w-full sm:w-1/3 items-center gap-4 text-gray-400">
+                <button id="btn-mute" class="hover:text-white transition-colors" aria-label="Mute"><i class="fa-solid fa-volume-high text-sm" id="vol-icon"></i></button>
+                <div class="w-20 h-2 bg-gray-800 rounded-full cursor-pointer relative" id="volume-container">
+                    <div class="h-full bg-white rounded-full pointer-events-none" id="volume-bar" style="width:75%"></div>
+                </div>
+                <button id="btn-playlist" class="hover:text-neon-cyan transition-colors ml-2 relative" aria-label="Playlist">
+                    <i class="fa-solid fa-list-ul"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Playlist Dropup -->
+        <div id="playlist-menu" class="absolute bottom-full right-0 sm:right-4 mb-2 w-full sm:w-96 glass-panel rounded-xl p-4 hidden border border-white/10 shadow-2xl">
+            <h4 class="text-xs font-display text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2 mb-2">
+                <i class="fa-solid fa-microchip text-neon-green mr-1"></i> Generative Sessions — Synthesized Live
+            </h4>
+            <ul class="space-y-1 text-sm max-h-64 overflow-y-auto" id="playlist-list">
+                <!-- Populated by JS -->
+            </ul>
+            <p class="text-[10px] text-gray-500 font-mono mt-3 mb-0 border-t border-white/10 pt-2">
+                Original compositions generated in real time by the FREQ/ARCH engine, each a tribute to a genre covered in this analysis.
+            </p>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- App -->
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH — Backend configuration                                          */
+/*                                                                            */
+/* Leave these blank to run in LOCAL mode: comments, archive submissions and  */
+/* votes are saved in each visitor's own browser (localStorage).              */
+/*                                                                            */
+/* To make submissions SHARED across all visitors, create a free Supabase     */
+/* project (https://supabase.com), run the SQL in SUPABASE.md, then paste     */
+/* your project URL and public "anon" key below. That's it — the site         */
+/* upgrades to a shared community wall automatically.                         */
+/*                                                                            */
+/* The anon key is designed to be public (row-level security protects your    */
+/* data), so it is safe to commit this file.                                  */
+/* -------------------------------------------------------------------------- */
+
+window.FREQARCH_CONFIG = {
+    supabaseUrl: '',      // e.g. "https://abcdefgh.supabase.co"
+    supabaseAnonKey: ''   // e.g. "eyJhbGciOiJIUzI1NiIsInR..."
+};
+
+    </script>
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH — Content Data                                                   */
+/* -------------------------------------------------------------------------- */
+
+const rabbitHoleData = [
+    { pioneer: "Tape B", successor: "Phrva", desc: "Deep dubstep producer creating bouncy, imposing beats with meticulous sub-bass engineering. Known for viral remixes utilizing 'flutter bass' built from white noise and analog filters." },
+    { pioneer: "CloZee", successor: "Chmura", desc: "Denver-based producer blending natural field recordings, rudimental percussion, and melancholic melodies. Heavily incorporates handpan into electronic tracks." },
+    { pioneer: "The Glitch Mob", successor: "Spoonbill", desc: "Australian industrial designer turned electronic producer. Uses heavily edited live instrumental recordings to create deeply textured, idiosyncratic glitch-hop." },
+    { pioneer: "Rusko", successor: "Distinct Motive", desc: "Fiercely dedicated to the original, deep 140 BPM UK dubstep sound. Transitions seamlessly between early 2000s Skream tracks and modern unreleased dubplates." },
+    { pioneer: "DJ Jes One", successor: "Gettoblaster", desc: "Duo heavily influenced by Chicago and Detroit pushing raw, jacking house. Captures the gritty, unpolished magic of 1990s warehouse house music." },
+    { pioneer: "Chase And Status", successor: "En:vy", desc: "Austrian-born minimal DnB producer with a background in pro ice hockey. Drums possess a frantic, eye-opening energy that commands the dancefloor." },
+    { pioneer: "Adam X", successor: "Orphx", desc: "Canadian duo merging noisy sample collages with rhythmic industrial techno. A masterclass in tension, using distorted, mechanical soundscapes." }
+];
+
+const analyticsData = [
+    { artist: "Chase & Status", subgenre: "Drum & Bass", pop: "Elite (5M+)", diff: "Stadium-level DnB crossovers" },
+    { artist: "Tape B", subgenre: "Old School Dubstep", pop: "High (1M+)", diff: "90s/00s Rap acapella integration" },
+    { artist: "Frankie Bones", subgenre: "Brooklyn Techno", pop: "Low / Cult", diff: "Creator of PLUR ethos" },
+    { artist: "Duke Mushroom", subgenre: "Electronic Folk", pop: "Niche / Inactive", diff: "Percussionist turned folk-electronic" },
+    { artist: "Phrva", subgenre: "Deep Dubstep", pop: "Growing (100K+)", diff: "Flutter bass sound design" }
+];
+
+/* -------------------------------------------------------------------------- */
+/* Blog: Transmissions                                                        */
+/* -------------------------------------------------------------------------- */
+
+const blogPosts = [
+    {
+        id: "amen-break",
+        title: "The Amen Break: Six Seconds That Built an Empire",
+        date: "2026-06-28",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Jungle", "DnB", "Sampling", "History"],
+        readTime: "6 min",
+        excerpt: "In 1969, a Washington D.C. funk band called The Winstons cut a B-side named \"Amen, Brother.\" Buried in its final stretch was a four-bar drum solo by Gregory \"G.C.\" Coleman — roughly six seconds of audio that would go on to underpin entire genres.",
+        body: `
+            <p>In 1969, a Washington D.C. funk and soul band called <strong>The Winstons</strong> released "Color Him Father," which won a Grammy. Almost nobody remembers the A-side. The B-side, <em>"Amen, Brother,"</em> contained a four-bar drum break performed by <strong>Gregory "G.C." Coleman</strong> — roughly six seconds of syncopated, crackling drums that would become the most sampled recording in music history.</p>
+            <p>When early samplers like the Akai S-series arrived in the late 80s, producers began chopping the break apart. It surfaced first in hip-hop — Salt-N-Pepa's "I Desire," N.W.A's "Straight Outta Compton" — but its true mutation happened across the Atlantic. UK hardcore producers pitched it up, sliced it into individual hits, and re-sequenced it into frantic, rolling patterns. From that single break, <strong>jungle</strong> was born. Drum &amp; bass followed. Breakcore weaponized it further. Even mainstream pop and television idents borrowed its DNA.</p>
+            <p>The tragedy is well documented: neither Coleman nor bandleader <strong>Richard Spencer</strong> ever received royalties for the tens of thousands of tracks built on their six seconds. Coleman died in 2006. In 2015, a crowdfunding campaign organized by UK DJs raised over £24,000 for Spencer — a small, late act of restitution from a culture that owes the break everything.</p>
+            <p>Listen to any DnB set today — including the Amen-inspired session in this site's own synthesis engine — and you are hearing the ghost of G.C. Coleman's right hand.</p>
+        `
+    },
+    {
+        id: "plur-origins",
+        title: "PLUR: The Four Letters That Codified a Culture",
+        date: "2026-06-14",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Rave Culture", "Frankie Bones", "Brooklyn", "History"],
+        readTime: "5 min",
+        excerpt: "Peace, Love, Unity, Respect. Before it was a hashtag or a kandi bracelet trade, it was a Brooklyn DJ's demand for order at an illegal warehouse party.",
+        body: `
+            <p>By the early 1990s, <strong>Frankie Bones</strong> had already exported American rave culture in the opposite direction of everyone else. After playing massive UK warehouse parties in 1989, he brought the blueprint home to Brooklyn and launched the <strong>Storm Rave</strong> series — illegal, industrial, and legendary parties that gave first breaks to a generation of American DJs.</p>
+            <p>As the story goes, during a Storm Rave around 1993 a fight broke out near the stage. Bones grabbed the microphone and issued an ultimatum that has been paraphrased ever since: if the crowd didn't start showing some <em>peace, love, and unity</em>, he'd end the party. The phrase stuck, "respect" completed the acronym, and <strong>PLUR</strong> became the ethical constitution of global rave culture.</p>
+            <p>What's remarkable is how durable those four letters proved. They survived the scene's criminalization in the 90s, the superclub era, the 2010s EDM industrial complex, and every cycle of the culture eating itself. The kandi handshake — peace, love, unity, respect, traded bead by bead — remains one of the few rituals that connects a Brooklyn warehouse in 1992 to a festival mainstage today.</p>
+            <p>Bones himself remains a working DJ and a fierce advocate for the scene's underground roots — proof that the culture's founding documents were written not in boardrooms, but on concrete floors in outer-borough darkness.</p>
+        `
+    },
+    {
+        id: "even-furthur-96",
+        title: "Even Furthur '96: The Night Daft Punk Played a Wisconsin Farm",
+        date: "2026-05-30",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Daft Punk", "Midwest", "Drop Bass Network", "History"],
+        readTime: "7 min",
+        excerpt: "Before Homework, before the pyramid, before the robots — two young Frenchmen played their first American show in the rural Wisconsin mud, booked by the Drop Bass Network for a crowd of Midwest ravers.",
+        body: `
+            <p>In the spring of 1996, <strong>Daft Punk</strong> were not yet robots. They were two young producers from Paris with a handful of singles on Soma Records and an album — <em>Homework</em> — still months from release. Their first-ever live performance in the United States did not happen in New York or Los Angeles. It happened at <strong>Even Furthur</strong>, a multi-day campout rave in rural Wisconsin thrown by <strong>Kurt Eckes</strong> and the <strong>Drop Bass Network</strong>.</p>
+            <p>The conditions were biblical: relentless rain, ankle-deep mud, generators, and a crowd of Midwest ravers who had driven hours into the countryside on faith. Attendees describe Thomas Bangalter and Guy-Manuel de Homem-Christo hauling their own gear through the muck and delivering a raw, hardware-driven live set — "Da Funk" pounded out to a field of kids who mostly had no idea they were watching history.</p>
+            <p>The booking has since become one of the most celebrated "before they were famous" moments in dance music. Within a year, <em>Homework</em> made Daft Punk global stars; within a decade, their pyramid show at Coachella 2006 rewired what electronic live performance could be. But the origin point on American soil remains a muddy farm in Wisconsin, a testament to the Midwest rave underground's outsized role in dance music history.</p>
+            <p>The Drop Bass Network's fearless curation — techno, acid, hardcore, and unknown European acts hauled into the woods of the upper Midwest — built a scene that never asked permission from the coasts. Even Furthur itself was revived in the 2010s, and its legend has only grown. Kudos, eternally, to Kurt and the crew.</p>
+        `
+    },
+    {
+        id: "midwest-arteries",
+        title: "From Warehouse to Waveform: The Venues That Kept the Midwest Alive",
+        date: "2026-05-12",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Milwaukee", "Chicago", "Venues", "House"],
+        readTime: "5 min",
+        excerpt: "Coastal narratives dominate dance music journalism, but the arteries of American rave culture run through Chicago warehouses, Milwaukee theatres, and Wisconsin farmland.",
+        body: `
+            <p>Every scene needs rooms. Chicago had the <strong>Warehouse</strong> — the club whose name, shortened by record store clerks labeling the music Frankie Knuckles played there, gave us the word <em>house</em>. It had the <strong>Music Box</strong>, where Ron Hardy pushed tape edits into delirium. And by the 90s it had <strong>Dance Mania</strong>, the label that stripped house down to its rawest, fastest, filthiest form: ghetto house.</p>
+            <p>Ninety minutes north, Milwaukee built its own arteries. <strong>The Rave / Eagles Club</strong> — a cavernous, allegedly haunted 1927 ballroom complex — became the region's alternative megachurch, hosting everything from hardcore punk to headline DnB. The <strong>Miramar Theatre</strong>, a converted 1913 movie house on the east side, evolved into the intimate room where the region's bass music community actually lives: local openers, touring underground headliners, and all-ages kids discovering 140 BPM for the first time.</p>
+            <p>Connect the dots — Chicago's warehouses, Milwaukee's theatres, Drop Bass Network's farmland raves, Rockford's record stores — and you get a self-sustaining regional circulatory system that never needed coastal validation. The artists surfaced in this site's analysis (Gettoblaster, Uriah G, Derek Fer Real, Mario Massa) are simply the current blood cells moving through fifty-year-old veins.</p>
+            <p>Support your local venue. The next Daft Punk booking is already on some regional promoter's whiteboard, and it will not be announced on a mainstage LED wall.</p>
+        `
+    },
+    {
+        id: "tb303-acid",
+        title: "The 303 That Failed Its Way Into History",
+        date: "2026-04-26",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Acid House", "Roland", "Gear", "History"],
+        readTime: "6 min",
+        excerpt: "Roland built the TB-303 to be a bass guitar for lonely guitarists. It was a commercial flop, discontinued in two years — and then Chicago kids found it in pawn shops and accidentally invented acid house.",
+        body: `
+            <p>In 1981, Roland released the <strong>TB-303 Bass Line</strong>: a small silver box meant to replace a bass player for practicing guitarists. It was hard to program, its "bass" sounded nothing like a real bass, and musicians hated it. Roland discontinued it in 1984 after selling only around 10,000 units. By every metric that mattered to its makers, the 303 was a failure.</p>
+            <p>Then it landed in Chicago pawn shops for cheap. Around 1985–87, producers — most famously <strong>DJ Pierre</strong> and <strong>Phuture</strong> on the track <em>"Acid Tracks"</em> — began twisting the 303's resonance and cutoff knobs while a pattern looped, discovering a squelching, liquid, mutating tone the machine was never designed to make. That sound became a genre: <strong>acid house</strong>. The resonant filter sweep is now one of the most recognizable gestures in all of electronic music.</p>
+            <p>The 303's rehabilitation is the perfect parable for this entire culture: value isn't defined by the manufacturer, the label, or the charts — it's defined by the people on the floor who hear something the designers never intended and refuse to let it go. The same silver box that Roland couldn't give away now sells for thousands, and every software studio ships an emulation of it.</p>
+            <p>The "Rust Belt Ritual" session in this site's engine runs an acid-style resonant filter sweep on its lead line — a small nod to the failed machine that would not die. Twist an imaginary knob while it plays.</p>
+        `
+    },
+    {
+        id: "detroit-belleville",
+        title: "The Belleville Three: Techno as Science Fiction",
+        date: "2026-04-08",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Detroit", "Techno", "History", "Futurism"],
+        readTime: "6 min",
+        excerpt: "Three friends from a Detroit suburb, raised on Kraftwerk, Parliament, and a radio DJ called The Electrifying Mojo, imagined a machine-made music for a post-industrial future — and named it techno.",
+        body: `
+            <p>Techno did not begin in a warehouse or a club. It began among three friends at <strong>Belleville High School</strong>, a mostly white suburb outside Detroit, in the late 1970s and early 80s. <strong>Juan Atkins</strong>, <strong>Derrick May</strong>, and <strong>Kevin Saunderson</strong> — the <strong>Belleville Three</strong> — bonded over an unlikely record collection: Kraftwerk's clinical electronics, Parliament-Funkadelic's cosmic funk, Italian disco, and the genre-shredding late-night broadcasts of Detroit radio legend <strong>The Electrifying Mojo</strong>.</p>
+            <p>Living in the shadow of a collapsing auto industry, they imagined a music made <em>by</em> machines <em>about</em> a machine future — Atkins famously described early tracks as sounding like "George Clinton and Kraftwerk stuck in an elevator." Under names like Cybotron, Model 500, Rhythim Is Rhythim, and Inner City, they built cold, funky, forward-tilting records that a British compilation in 1988 would package under a single word borrowed from Atkins: <strong>techno</strong>.</p>
+            <p>The irony is durable: techno was born in Black America but found its first mass audience in Europe, where Detroit producers were treated as visionary artists years before their home country noticed. That transatlantic feedback loop — Detroit → Berlin → the world → back to Detroit — still defines the genre's geography today.</p>
+            <p>Every four-on-the-floor kick in this site's "Rust Belt Ritual" and "Warehouse Jack" sessions traces a direct line back to three teenagers in Belleville deciding the future should have a soundtrack.</p>
+        `
+    }
+];
+
+/* -------------------------------------------------------------------------- */
+/* Seed data: comments + community archive                                    */
+/* -------------------------------------------------------------------------- */
+
+const seedComments = [
+    { id: "seed-c1", name: "NeonRaider", genre: "Industrial Techno", text: "Orphx blew my mind at Forms of Hands. This list is incredibly accurate.", ts: Date.now() - 1000 * 60 * 60 * 2 },
+    { id: "seed-c2", name: "Sub_Freq", genre: "140 Dubstep", text: "Distinct Motive keeping the true sound system culture alive. Big ups for the feature.", ts: Date.now() - 1000 * 60 * 60 * 5 },
+    { id: "seed-c3", name: "MidwestMainframe", genre: "Acid Techno", text: "Finally somebody giving Drop Bass Network their flowers. The Even Furthur story needs to be taught in schools.", ts: Date.now() - 1000 * 60 * 60 * 26 }
+];
+
+const seedArchive = {
+    moments: [
+        { id: "seed-m1", f1: "Daft Punk's US debut at Even Furthur", f2: "1996", text: "Two unknown French producers play their first American show in the Wisconsin mud, booked by the Drop Bass Network. The rest is history.", handle: "FREQ/ARCH", votes: 21, ts: Date.now() - 1000 * 60 * 60 * 24 * 6 },
+        { id: "seed-m2", f1: "Frankie Knuckles takes residency at the Warehouse", f2: "1977", text: "The Chicago club whose dancefloor — and whose shortened name on record-store labels — gives 'house music' its name.", handle: "WaxArchivist", votes: 17, ts: Date.now() - 1000 * 60 * 60 * 24 * 5 },
+        { id: "seed-m3", f1: "The Belleville Three invent techno", f2: "1985", text: "Juan Atkins, Derrick May, and Kevin Saunderson fuse funk with futurism in the Detroit suburbs and accidentally design the next 40 years of music.", handle: "313Forever", votes: 15, ts: Date.now() - 1000 * 60 * 60 * 24 * 4 },
+        { id: "seed-m4", f1: "Skrillex sweeps the Grammys — brostep goes overground", f2: "2012", text: "Love it or hate it, three Grammys for 'Scary Monsters and Nice Sprites' dragged American dubstep out of the forums and onto every mainstage on Earth.", handle: "WobbleScholar", votes: 9, ts: Date.now() - 1000 * 60 * 60 * 24 * 3 }
+    ],
+    artists: [
+        { id: "seed-a1", f1: "Djrum", f2: "DnB / Techno / Modern Classical", text: "A turntablist and trained pianist collapsing jungle, techno, and film-score emotion into single tracks. Criminally under-booked in the States.", handle: "FREQ/ARCH", votes: 12, ts: Date.now() - 1000 * 60 * 60 * 24 * 6 },
+        { id: "seed-a2", f1: "Hamdi", f2: "New-School 140", text: "Leading the UK's new 140 wave — proof that dubstep's second golden age is happening right now if you know where to look.", handle: "Sub_Freq", votes: 10, ts: Date.now() - 1000 * 60 * 60 * 24 * 4 },
+        { id: "seed-a3", f1: "DJ Heather", f2: "Chicago House", text: "Three decades deep in Chicago house and still out-mixing everyone on the bill. A living institution who deserves headline slots, not history lessons.", handle: "WaxArchivist", votes: 8, ts: Date.now() - 1000 * 60 * 60 * 24 * 2 }
+    ],
+    tracks: [
+        { id: "seed-t1", f1: "Brown Paper Bag", f2: "Roni Size / Reprazent", text: "The live-bass DnB odyssey that won the 1997 Mercury Prize over Radiohead. Still sounds like the future.", handle: "FREQ/ARCH", votes: 14, ts: Date.now() - 1000 * 60 * 60 * 24 * 6 },
+        { id: "seed-t2", f1: "Cockney Thug", f2: "Rusko", text: "The moment UK dubstep grew fangs. You can trace half of American bass music to this one drop.", handle: "WobbleScholar", votes: 11, ts: Date.now() - 1000 * 60 * 60 * 24 * 5 },
+        { id: "seed-t3", f1: "Call It Techno", f2: "Frankie Bones", text: "Brooklyn's rave manifesto on wax, from the man who gave us PLUR.", handle: "NeonRaider", votes: 7, ts: Date.now() - 1000 * 60 * 60 * 24 * 3 }
+    ]
+};
+
+    </script>
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH — Data Store                                                     */
+/*                                                                            */
+/* A persistence abstraction with two interchangeable backends:              */
+/*                                                                            */
+/*   • CLOUD  — Supabase (shared across all visitors) when js/config.js has   */
+/*              a supabaseUrl + supabaseAnonKey.                              */
+/*   • LOCAL  — browser localStorage (per-visitor) otherwise, or as an        */
+/*              automatic fallback if the Supabase client fails to load.      */
+/*                                                                            */
+/* Every method returns a Promise and yields normalized objects, so the UI    */
+/* in app.js is identical regardless of backend. Timestamps are always        */
+/* returned as `ts` in epoch-milliseconds.                                    */
+/* -------------------------------------------------------------------------- */
+
+const Store = (() => {
+    'use strict';
+
+    const cfg = window.FREQARCH_CONFIG || {};
+    const wantCloud = !!(cfg.supabaseUrl && cfg.supabaseAnonKey);
+
+    let sb = null;
+    let mode = 'local';           // resolved after init()
+    let initPromise = null;
+
+    const COMMENTS_KEY = 'freqarch_comments_v1';
+    const ARCHIVE_KEY = 'freqarch_archive_v1';
+
+    const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2));
+
+    /* ------------------------------ localStorage --------------------------- */
+
+    function lsLoad(key, fallback) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+        } catch (e) { return fallback; }
+    }
+    function lsSave(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode */ }
+    }
+
+    function localComments() {
+        let c = lsLoad(COMMENTS_KEY, null);
+        if (!c) { c = [...seedComments]; lsSave(COMMENTS_KEY, c); }
+        return c;
+    }
+    function localArchive() {
+        let a = lsLoad(ARCHIVE_KEY, null);
+        if (!a) { a = JSON.parse(JSON.stringify(seedArchive)); lsSave(ARCHIVE_KEY, a); }
+        // Guard against older shapes missing a tab
+        return { moments: a.moments || [], artists: a.artists || [], tracks: a.tracks || [] };
+    }
+
+    /* ------------------------------ Initialization ------------------------- */
+
+    async function init() {
+        if (initPromise) return initPromise;
+        initPromise = (async () => {
+            if (!wantCloud) { mode = 'local'; return; }
+            try {
+                const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+                sb = mod.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+                // Probe connectivity so we can fall back cleanly on error
+                const { error } = await sb.from('comments').select('id').limit(1);
+                if (error) throw error;
+                mode = 'cloud';
+            } catch (e) {
+                console.warn('[FREQ/ARCH] Supabase unavailable — using localStorage. Reason:', e.message || e);
+                sb = null;
+                mode = 'local';
+            }
+        })();
+        return initPromise;
+    }
+
+    /* ------------------------------ Comments ------------------------------- */
+
+    async function getComments() {
+        await init();
+        if (mode === 'cloud') {
+            const { data, error } = await sb.from('comments')
+                .select('*').order('created_at', { ascending: false }).limit(500);
+            if (error) { console.warn('getComments cloud error', error); return []; }
+            return data.map(r => ({
+                id: r.id, name: r.name, genre: r.genre, text: r.message,
+                ts: new Date(r.created_at).getTime()
+            }));
+        }
+        return localComments();
+    }
+
+    async function addComment({ name, genre, text }) {
+        await init();
+        if (mode === 'cloud') {
+            const { error } = await sb.from('comments').insert({ name, genre, message: text });
+            if (error) console.warn('addComment cloud error', error);
+            return;
+        }
+        const list = localComments();
+        list.push({ id: uid(), name, genre, text, ts: Date.now() });
+        lsSave(COMMENTS_KEY, list);
+    }
+
+    /* ------------------------------ Archive -------------------------------- */
+
+    async function getArchive() {
+        await init();
+        if (mode === 'cloud') {
+            const { data, error } = await sb.from('archive')
+                .select('*').order('votes', { ascending: false }).limit(1000);
+            if (error) { console.warn('getArchive cloud error', error); return { moments: [], artists: [], tracks: [] }; }
+            const out = { moments: [], artists: [], tracks: [] };
+            for (const r of data) {
+                (out[r.kind] || (out[r.kind] = [])).push({
+                    id: r.id, f1: r.f1, f2: r.f2, text: r.message,
+                    handle: r.handle, votes: r.votes, ts: new Date(r.created_at).getTime()
+                });
+            }
+            return out;
+        }
+        return localArchive();
+    }
+
+    async function addArchiveItem(kind, { f1, f2, text, handle }) {
+        await init();
+        const id = uid();
+        if (mode === 'cloud') {
+            const { data, error } = await sb.from('archive')
+                .insert({ kind, f1, f2, message: text, handle, votes: 1 })
+                .select('id').single();
+            if (error) { console.warn('addArchiveItem cloud error', error); return id; }
+            return data.id;
+        }
+        const a = localArchive();
+        a[kind].unshift({ id, f1, f2, text, handle, votes: 1, ts: Date.now() });
+        lsSave(ARCHIVE_KEY, a);
+        return id;
+    }
+
+    async function voteArchive(kind, id) {
+        await init();
+        if (mode === 'cloud') {
+            // Prefer an atomic RPC; fall back to read-modify-write if absent.
+            const { error } = await sb.rpc('increment_archive_vote', { row_id: id });
+            if (error) {
+                const { data } = await sb.from('archive').select('votes').eq('id', id).single();
+                if (data) await sb.from('archive').update({ votes: data.votes + 1 }).eq('id', id);
+            }
+            return;
+        }
+        const a = localArchive();
+        const item = (a[kind] || []).find(x => x.id === id);
+        if (item) { item.votes++; lsSave(ARCHIVE_KEY, a); }
+    }
+
+    return {
+        init,
+        getComments, addComment,
+        getArchive, addArchiveItem, voteArchive,
+        mode: () => mode,
+        isCloud: () => mode === 'cloud'
+    };
+})();
+
+    </script>
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH Synthesis Engine                                                 */
+/*                                                                            */
+/* A generative EDM engine built on the Web Audio API. Every kick, wobble,    */
+/* reese, hat, and pad is synthesized from oscillators and filtered noise in  */
+/* real time — no audio files, no streams. Each "track" is an original 64-bar */
+/* composition (intro → build → drop → break → drop → outro) defined by a     */
+/* pattern config, scheduled with the standard look-ahead clock pattern.      */
+/* -------------------------------------------------------------------------- */
+
+const AudioEngine = (() => {
+    'use strict';
+
+    /* ------------------------------ Track data ---------------------------- */
+    // Pattern arrays are 16 steps (one bar of 16th notes); values are
+    // velocities (0 = rest). Bass/lead notes are semitone offsets from root.
+    // n = null in lead patterns means rest.
+
+    const TRACKS = [
+        {
+            id: 'mycelium',
+            title: 'Mycelium Transmission',
+            genre: 'Organic Bass · 96 BPM',
+            inspiredBy: 'CloZee / Duke Mushroom',
+            bpm: 96, bars: 64, root: 38, swing: 0.06,
+            bassType: 'sub', leadType: 'handpan', snareType: 'snare',
+            kit: { pitch: 120, floor: 44, decay: 0.5 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0.5, 0,0,0,0, 0,0,0,0],
+                snare: [0,0,0,0, 0,0,0,0, 0.7,0,0,0, 0,0,0,0],
+                hat:   [0,0,0.2,0, 0,0,0.25,0, 0,0,0.2,0, 0,0,0.3,0],
+                ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0.25,0],
+                shak:  [0.2,0.1,0.16,0.1, 0.22,0.1,0.16,0.1, 0.2,0.1,0.16,0.1, 0.22,0.1,0.18,0.12],
+                bass: [
+                    [{s:0,n:0,len:6},{s:10,n:5,len:4}],
+                    [{s:0,n:0,len:6},{s:10,n:3,len:4}]
+                ],
+                lead: [
+                    [0,null,null,7, null,10,null,null, 12,null,null,7, null,5,null,null],
+                    [15,null,null,12, null,10,null,7, null,null,5,null, 3,null,null,null]
+                ],
+                chords: [[0,3,7,12],[-2,5,10,14]]
+            }
+        },
+        {
+            id: 'wobble',
+            title: 'Wobble Protocol 140',
+            genre: 'Old-School Dubstep · 140 BPM',
+            inspiredBy: 'Rusko / Tape B / Distinct Motive',
+            bpm: 140, bars: 64, root: 28, swing: 0,
+            bassType: 'wobble', leadType: 'pluck', snareType: 'snare',
+            kit: { pitch: 150, floor: 42, decay: 0.45 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,0,0.7, 0,0,0,0],
+                snare: [0,0,0,0, 0,0,0,0, 0.9,0,0,0, 0,0,0,0],
+                hat:   [0.35,0,0.5,0, 0.35,0,0.5,0, 0.35,0,0.5,0, 0.35,0,0.55,0.3],
+                ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0.4,0],
+                bass: [
+                    [{s:0,n:0,len:6,r:4.7},{s:6,n:0,len:2,r:9.3},{s:8,n:0,len:5,r:3.5},{s:13,n:3,len:3,r:7}],
+                    [{s:0,n:0,len:4,r:2.3},{s:4,n:-2,len:4,r:4.7},{s:8,n:3,len:4,r:9.3},{s:12,n:5,len:2,r:4.7},{s:14,n:3,len:2,r:14}]
+                ],
+                lead: [
+                    [12,null,null,10, null,7,null,null, 5,null,7,null, 3,null,null,null],
+                    [12,null,null,10, null,7,null,null, 15,null,12,null, 10,null,7,null]
+                ],
+                chords: [[0,3,7,12],[-2,2,7,10]]
+            }
+        },
+        {
+            id: 'amen',
+            title: 'Amen Circuit',
+            genre: 'Jungle / DnB · 174 BPM',
+            inspiredBy: 'Roni Size / Chase & Status / En:vy',
+            bpm: 174, bars: 64, root: 29, swing: 0,
+            bassType: 'reese', leadType: 'pluck', snareType: 'snare',
+            kit: { pitch: 160, floor: 48, decay: 0.3 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,0.9,0, 0,0,0,0],
+                snare: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+                ghost: [0,0,0,0, 0,0,0,0.35, 0,0.3,0,0, 0,0,0,0.35],
+                hat:   [0.4,0.15,0.3,0.15, 0.4,0.15,0.3,0.15, 0.4,0.15,0.3,0.15, 0.4,0.15,0.35,0.2],
+                ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+                bass: [
+                    [{s:0,n:0,len:10},{s:10,n:0,len:6}],
+                    [{s:0,n:5,len:8},{s:8,n:3,len:8}]
+                ],
+                lead: [
+                    [0,null,3,null, 5,null,7,null, 10,null,7,null, 5,null,3,null],
+                    [12,null,10,null, 7,null,5,null, 3,null,5,null, 7,null,10,null]
+                ],
+                chords: [[0,3,7,10],[-2,3,5,10]]
+            }
+        },
+        {
+            id: 'rustbelt',
+            title: 'Rust Belt Ritual',
+            genre: 'Industrial Techno · 132 BPM',
+            inspiredBy: 'Adam X / Orphx / Frankie Bones',
+            bpm: 132, bars: 64, root: 33, swing: 0,
+            bassType: 'sub', leadType: 'acid', snareType: 'clap',
+            kit: { pitch: 130, floor: 38, decay: 0.5 },
+            pat: {
+                kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+                snare: [0,0,0,0, 0.8,0,0,0, 0,0,0,0, 0.8,0,0,0],
+                hat:   [0.18,0.1,0.28,0.1, 0.18,0.1,0.28,0.1, 0.18,0.1,0.28,0.1, 0.18,0.1,0.28,0.12],
+                ohat:  [0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0],
+                bass: [
+                    [{s:2,n:0,len:2},{s:6,n:0,len:2},{s:10,n:0,len:2},{s:14,n:0,len:2}],
+                    [{s:2,n:0,len:2},{s:6,n:0,len:2},{s:10,n:-2,len:2},{s:14,n:0,len:2}]
+                ],
+                lead: [
+                    [0,null,12,null, null,7,null,null, 3,null,null,12, null,7,null,3],
+                    [0,null,12,null, null,10,null,null, 3,null,null,15, null,7,null,0]
+                ],
+                chords: [[0,7,12]]
+            }
+        },
+        {
+            id: 'warehouse',
+            title: 'Warehouse Jack',
+            genre: 'Chicago House · 124 BPM',
+            inspiredBy: 'DJ Jes One / Gettoblaster / DJ Dan',
+            bpm: 124, bars: 64, root: 31, swing: 0.13,
+            bassType: 'stab', leadType: 'stab', snareType: 'clap',
+            kit: { pitch: 135, floor: 45, decay: 0.35 },
+            pat: {
+                kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+                snare: [0,0,0,0, 0.85,0,0,0, 0,0,0,0, 0.85,0,0,0],
+                hat:   [0.12,0.08,0.15,0.08, 0.12,0.08,0.15,0.08, 0.12,0.08,0.15,0.08, 0.12,0.08,0.15,0.08],
+                ohat:  [0,0,0.6,0, 0,0,0.6,0, 0,0,0.6,0, 0,0,0.6,0],
+                bass: [
+                    [{s:3,n:0,len:1},{s:7,n:0,len:1},{s:11,n:5,len:1},{s:14,n:7,len:2}],
+                    [{s:3,n:0,len:1},{s:7,n:3,len:1},{s:11,n:5,len:1},{s:14,n:10,len:2}]
+                ],
+                lead: [
+                    [null,null,12,null, null,null,null,10, null,null,7,null, null,null,null,null],
+                    [null,null,15,null, null,null,null,12, null,null,10,null, null,null,7,null]
+                ],
+                chords: [[0,3,7,10],[5,8,12,15]]
+            }
+        },
+        {
+            id: 'orlando',
+            title: 'Orlando Voltage',
+            genre: 'Florida Breaks · 130 BPM',
+            inspiredBy: 'DJ Icey / Baby Anne',
+            bpm: 130, bars: 64, root: 33, swing: 0.07,
+            bassType: 'stab', leadType: 'pluck', snareType: 'snare',
+            kit: { pitch: 145, floor: 46, decay: 0.35 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0.8,0, 0,0,0.9,0, 0,0,0,0],
+                snare: [0,0,0,0, 0.9,0,0,0, 0,0,0,0, 0.9,0,0,0],
+                ghost: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0.3],
+                hat:   [0.3,0.12,0.22,0.12, 0.3,0.12,0.22,0.12, 0.3,0.12,0.22,0.12, 0.3,0.12,0.25,0.15],
+                ohat:  [0,0,0.4,0, 0,0,0.4,0, 0,0,0.4,0, 0,0,0.4,0],
+                bass: [
+                    [{s:0,n:0,len:2},{s:6,n:0,len:1},{s:8,n:7,len:2},{s:13,n:5,len:2}],
+                    [{s:0,n:0,len:2},{s:6,n:3,len:1},{s:8,n:5,len:2},{s:13,n:10,len:2}]
+                ],
+                lead: [
+                    [12,null,10,null, null,7,null,5, null,null,7,null, 10,null,12,null],
+                    [15,null,12,null, null,10,null,7, null,null,10,null, 12,null,15,null]
+                ],
+                chords: [[0,3,7],[-4,0,5]]
+            }
+        },
+        {
+            id: 'garage',
+            title: '2-Step Cathedral',
+            genre: 'UK Garage · 132 BPM',
+            inspiredBy: 'the pirate-radio lineage of DnB & house',
+            bpm: 132, bars: 64, root: 33, swing: 0.16,
+            bassType: 'stab', leadType: 'stab', snareType: 'clap',
+            kit: { pitch: 140, floor: 46, decay: 0.32 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+                snare: [0,0,0,0, 0.9,0,0,0, 0,0,0,0, 0.9,0,0,0.4],
+                hat:   [0.2,0.1,0.35,0.15, 0.2,0.1,0.35,0.15, 0.2,0.1,0.35,0.15, 0.2,0.1,0.4,0.2],
+                ohat:  [0,0,0,0, 0,0,0.5,0, 0,0,0,0, 0,0,0.5,0],
+                shak:  [0.12,0.14,0.1,0.16, 0.12,0.14,0.1,0.16, 0.12,0.14,0.1,0.16, 0.12,0.14,0.12,0.18],
+                bass: [
+                    [{s:0,n:0,len:2},{s:5,n:0,len:1},{s:8,n:5,len:2},{s:11,n:3,len:1},{s:14,n:7,len:2}],
+                    [{s:0,n:-2,len:2},{s:5,n:-2,len:1},{s:8,n:3,len:2},{s:11,n:5,len:1},{s:14,n:10,len:2}]
+                ],
+                lead: [
+                    [null,null,12,null, 15,null,null,12, null,10,null,null, 7,null,null,null],
+                    [null,null,17,null, 15,null,null,12, null,10,null,7, null,null,10,null]
+                ],
+                chords: [[0,3,7,10],[-2,2,5,10],[-4,0,3,8],[-2,2,5,10]]
+            }
+        },
+        {
+            id: 'trance',
+            title: 'Aurora Ascension',
+            genre: 'Uplifting Trance · 138 BPM',
+            inspiredBy: 'the melodic-festival main stage',
+            bpm: 138, bars: 64, root: 33, swing: 0,
+            bassType: 'sub', leadType: 'supersaw', snareType: 'clap',
+            kit: { pitch: 145, floor: 44, decay: 0.4 },
+            pat: {
+                kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+                snare: [0,0,0,0, 0.7,0,0,0, 0,0,0,0, 0.7,0,0,0],
+                hat:   [0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0.3],
+                ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0.4,0],
+                bass: [
+                    [{s:2,n:0,len:1},{s:4,n:0,len:1},{s:6,n:0,len:1},{s:8,n:0,len:1},{s:10,n:0,len:1},{s:12,n:0,len:1},{s:14,n:0,len:1}],
+                    [{s:2,n:-4,len:1},{s:4,n:-4,len:1},{s:6,n:-4,len:1},{s:8,n:-4,len:1},{s:10,n:-4,len:1},{s:12,n:-4,len:1},{s:14,n:-4,len:1}]
+                ],
+                lead: [
+                    [0,null,null,null, 7,null,3,null, null,null,10,null, 7,null,null,null],
+                    [12,null,null,10, null,7,null,null, 3,null,null,7, null,10,null,12]
+                ],
+                chords: [[0,3,7,12],[-4,3,8,12],[-2,5,10,14],[-4,0,7,12]]
+            }
+        },
+        {
+            id: 'triphop',
+            title: 'Dust & Vinyl',
+            genre: 'Trip-Hop / Downtempo · 88 BPM',
+            inspiredBy: 'Duke Mushroom / the Warriors era',
+            bpm: 88, bars: 64, root: 31, swing: 0.12,
+            bassType: 'sub', leadType: 'handpan', snareType: 'snare',
+            kit: { pitch: 110, floor: 40, decay: 0.55 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+                snare: [0,0,0,0, 0,0,0,0, 0.75,0,0,0, 0,0,0,0],
+                hat:   [0.25,0,0.18,0.22, 0.25,0,0.18,0.22, 0.25,0,0.18,0.22, 0.25,0,0.2,0.24],
+                ohat:  [0,0,0,0, 0,0,0.3,0, 0,0,0,0, 0,0,0.3,0],
+                shak:  [0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.1],
+                bass: [
+                    [{s:0,n:0,len:6},{s:8,n:3,len:3},{s:11,n:-2,len:5}],
+                    [{s:0,n:-4,len:6},{s:8,n:0,len:3},{s:11,n:3,len:5}]
+                ],
+                lead: [
+                    [12,null,null,null, null,null,15,null, null,10,null,null, 7,null,null,null],
+                    [null,null,10,null, 12,null,null,null, 15,null,null,10, null,null,7,null]
+                ],
+                chords: [[0,3,7,10],[-4,0,3,7]]
+            }
+        }
+    ];
+
+    /* ------------------------------ Engine state --------------------------- */
+
+    const LOOKAHEAD_MS = 25;      // scheduler poll interval
+    const SCHEDULE_AHEAD = 0.12;  // seconds of audio scheduled in advance
+
+    let ctx = null;
+    let master, compressor, analyser;
+    let delayIn, delayNode, reverbIn;
+    let noiseBuf = null;
+    let spectrum = null;
+
+    let trackIndex = 0;
+    let playing = false;
+    let step = 0;
+    let nextNoteTime = 0;
+    let timer = null;
+    let volume = 0.75;
+    let muted = false;
+
+    const handlers = { track: [], state: [] };
+    function on(evt, cb) { if (handlers[evt]) handlers[evt].push(cb); }
+    function emit(evt, data) { (handlers[evt] || []).forEach(cb => { try { cb(data); } catch (e) { /* keep engine alive */ } }); }
+
+    const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+    const stepsPerBeatSec = tr => 60 / tr.bpm / 4; // duration of one 16th note
+    const totalSteps = tr => tr.bars * 16;
+
+    /* ------------------------------ Graph setup ---------------------------- */
+
+    function init() {
+        if (ctx) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        ctx = new AC();
+
+        master = ctx.createGain();
+        master.gain.value = muted ? 0 : volume;
+
+        compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.value = -18;
+        compressor.knee.value = 20;
+        compressor.ratio.value = 5;
+        compressor.attack.value = 0.004;
+        compressor.release.value = 0.18;
+
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.78;
+        spectrum = new Uint8Array(analyser.frequencyBinCount);
+
+        master.connect(compressor);
+        compressor.connect(analyser);
+        analyser.connect(ctx.destination);
+
+        // Tempo-synced feedback delay send (dotted eighth)
+        delayIn = ctx.createGain();
+        delayIn.gain.value = 0.3;
+        delayNode = ctx.createDelay(2.0);
+        const fb = ctx.createGain();
+        fb.gain.value = 0.32;
+        const dampen = ctx.createBiquadFilter();
+        dampen.type = 'lowpass';
+        dampen.frequency.value = 2400;
+        delayIn.connect(delayNode);
+        delayNode.connect(dampen);
+        dampen.connect(fb);
+        fb.connect(delayNode);
+        dampen.connect(master);
+
+        // Reverb send (synthesized impulse — decaying stereo noise)
+        reverbIn = ctx.createGain();
+        reverbIn.gain.value = 0.55;
+        const convolver = ctx.createConvolver();
+        convolver.buffer = makeImpulse(2.4, 2.6);
+        reverbIn.connect(convolver);
+        convolver.connect(master);
+
+        // Shared white-noise buffer for all percussion
+        noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
+        syncDelayToTempo();
+    }
+
+    function makeImpulse(seconds, decay) {
+        const rate = ctx.sampleRate;
+        const len = Math.floor(rate * seconds);
+        const buf = ctx.createBuffer(2, len, rate);
+        for (let ch = 0; ch < 2; ch++) {
+            const data = buf.getChannelData(ch);
+            for (let i = 0; i < len; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+            }
+        }
+        return buf;
+    }
+
+    function syncDelayToTempo() {
+        if (!ctx) return;
+        const tr = TRACKS[trackIndex];
+        delayNode.delayTime.value = stepsPerBeatSec(tr) * 6; // dotted eighth
+    }
+
+    function noiseSrc() {
+        const src = ctx.createBufferSource();
+        src.buffer = noiseBuf;
+        src.loop = true;
+        return src;
+    }
+
+    /* ------------------------------ Instruments ---------------------------- */
+
+    function kick(t, vel, kit) {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.frequency.setValueAtTime(kit.pitch, t);
+        osc.frequency.exponentialRampToValueAtTime(kit.floor, t + 0.09);
+        g.gain.setValueAtTime(0.95 * vel, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + kit.decay);
+        osc.connect(g); g.connect(master);
+        osc.start(t); osc.stop(t + kit.decay + 0.05);
+        // transient click
+        const n = noiseSrc();
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 1000;
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.22 * vel, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        n.connect(hp); hp.connect(ng); ng.connect(master);
+        n.start(t); n.stop(t + 0.05);
+    }
+
+    function snare(t, vel) {
+        const n = noiseSrc();
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.9;
+        const ng = ctx.createGain();
+        ng.gain.setValueAtTime(0.5 * vel, t);
+        ng.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+        n.connect(bp); bp.connect(ng); ng.connect(master);
+        ng.connect(reverbIn);
+        n.start(t); n.stop(t + 0.2);
+        // tonal body
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(196, t);
+        osc.frequency.exponentialRampToValueAtTime(140, t + 0.06);
+        const og = ctx.createGain();
+        og.gain.setValueAtTime(0.28 * vel, t);
+        og.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        osc.connect(og); og.connect(master);
+        osc.start(t); osc.stop(t + 0.12);
+    }
+
+    function clap(t, vel) {
+        [0, 0.012, 0.026].forEach((off, i) => {
+            const n = noiseSrc();
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1150; bp.Q.value = 1.6;
+            const g = ctx.createGain();
+            const amp = (i === 2 ? 0.42 : 0.2) * vel;
+            g.gain.setValueAtTime(amp, t + off);
+            g.gain.exponentialRampToValueAtTime(0.001, t + off + (i === 2 ? 0.16 : 0.03));
+            n.connect(bp); bp.connect(g); g.connect(master);
+            g.connect(reverbIn);
+            n.start(t + off); n.stop(t + off + 0.2);
+        });
+    }
+
+    function hat(t, vel, open) {
+        const n = noiseSrc();
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 7200 + Math.random() * 800;
+        const g = ctx.createGain();
+        const dec = open ? 0.28 : 0.045;
+        g.gain.setValueAtTime(0.32 * vel, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dec);
+        n.connect(hp); hp.connect(g); g.connect(master);
+        n.start(t); n.stop(t + dec + 0.02);
+    }
+
+    function shaker(t, vel) {
+        const n = noiseSrc();
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 4800;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.2 * vel, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        n.connect(hp); hp.connect(g); g.connect(master);
+        n.start(t); n.stop(t + 0.12);
+    }
+
+    /* Bass voices — each includes a pure-sine sub layer for weight. */
+
+    function subLayer(t, f, dur, vel) {
+        const osc = ctx.createOscillator();
+        osc.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.5 * vel, t + 0.015);
+        g.gain.setValueAtTime(0.5 * vel, t + Math.max(0.02, dur - 0.05));
+        g.gain.linearRampToValueAtTime(0.001, t + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t); osc.stop(t + dur + 0.05);
+    }
+
+    function bassWobble(t, f, dur, vel, rate) {
+        subLayer(t, f, dur, vel);
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f * 2;
+        const osc2 = ctx.createOscillator();
+        osc2.type = 'square';
+        osc2.frequency.value = f;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 180;
+        lp.Q.value = 6;
+        const lfo = ctx.createOscillator();
+        lfo.frequency.value = rate || 4.7;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 850;
+        lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.4 * vel, t + 0.01);
+        g.gain.setValueAtTime(0.4 * vel, t + Math.max(0.02, dur - 0.04));
+        g.gain.linearRampToValueAtTime(0.001, t + dur);
+        osc.connect(lp); osc2.connect(lp); lp.connect(g); g.connect(master);
+        osc.start(t); osc2.start(t); lfo.start(t);
+        osc.stop(t + dur + 0.05); osc2.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+    }
+
+    function bassReese(t, f, dur, vel) {
+        subLayer(t, f, dur, vel * 0.9);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.28 * vel, t + 0.02);
+        g.gain.setValueAtTime(0.28 * vel, t + Math.max(0.02, dur - 0.06));
+        g.gain.linearRampToValueAtTime(0.001, t + dur);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 620; lp.Q.value = 2;
+        [-14, 14].forEach(cents => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = f * 2;
+            osc.detune.value = cents;
+            osc.connect(lp);
+            osc.start(t); osc.stop(t + dur + 0.05);
+        });
+        lp.connect(g); g.connect(master);
+    }
+
+    function bassSub(t, f, dur, vel) {
+        subLayer(t, f, dur, vel * 1.15);
+        // gentle top harmonic so it reads on small speakers
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = f * 2;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.12 * vel, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t); osc.stop(t + dur + 0.05);
+    }
+
+    function bassStab(t, f, dur, vel) {
+        subLayer(t, f, Math.min(dur, 0.22), vel);
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f * 2;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = 4;
+        lp.frequency.setValueAtTime(1500, t);
+        lp.frequency.exponentialRampToValueAtTime(220, t + 0.16);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.4 * vel, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + Math.min(dur, 0.25));
+        osc.connect(lp); lp.connect(g); g.connect(master);
+        osc.start(t); osc.stop(t + 0.3);
+    }
+
+    /* Lead voices */
+
+    function leadPluck(t, f, vel) {
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.2 * vel, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 2300;
+        [['triangle', 0], ['sawtooth', 8]].forEach(([type, cents]) => {
+            const osc = ctx.createOscillator();
+            osc.type = type;
+            osc.frequency.value = f;
+            osc.detune.value = cents;
+            osc.connect(lp);
+            osc.start(t); osc.stop(t + 0.35);
+        });
+        lp.connect(g); g.connect(master); g.connect(delayIn);
+    }
+
+    function leadHandpan(t, f, vel) {
+        const out = ctx.createGain();
+        out.gain.value = 1;
+        [[1, 0.28], [2.01, 0.12], [2.99, 0.06]].forEach(([mult, amp]) => {
+            const osc = ctx.createOscillator();
+            osc.frequency.value = f * mult;
+            const g = ctx.createGain();
+            g.gain.setValueAtTime(0.001, t);
+            g.gain.linearRampToValueAtTime(amp * vel, t + 0.004);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 1.15);
+            osc.connect(g); g.connect(out);
+            osc.start(t); osc.stop(t + 1.3);
+        });
+        out.connect(master); out.connect(reverbIn); out.connect(delayIn);
+    }
+
+    function leadAcid(t, f, vel) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = f / 2;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = 11;
+        lp.frequency.setValueAtTime(200, t);
+        lp.frequency.exponentialRampToValueAtTime(Math.min(f * 5, 2800), t + 0.04);
+        lp.frequency.exponentialRampToValueAtTime(220, t + 0.16);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.24 * vel, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.17);
+        osc.connect(lp); lp.connect(g); g.connect(master); g.connect(delayIn);
+        osc.start(t); osc.stop(t + 0.22);
+    }
+
+    function leadStab(t, f, vel) {
+        // organ-ish house stab: note + fifth + octave
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.13 * vel, t + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 2600;
+        [1, 1.5, 2].forEach(mult => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = f * mult;
+            osc.connect(lp);
+            osc.start(t); osc.stop(t + 0.25);
+        });
+        lp.connect(g); g.connect(master); g.connect(delayIn);
+    }
+
+    function padChord(t, freqs, dur) {
+        const g = ctx.createGain();
+        const atk = Math.min(1.2, dur * 0.3);
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.085, t + atk);
+        g.gain.setValueAtTime(0.085, t + dur - 0.8);
+        g.gain.linearRampToValueAtTime(0.001, t + dur);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 950;
+        freqs.forEach(f => {
+            [-8, 8].forEach(cents => {
+                const osc = ctx.createOscillator();
+                osc.type = 'sawtooth';
+                osc.frequency.value = f;
+                osc.detune.value = cents;
+                osc.connect(lp);
+                osc.start(t); osc.stop(t + dur + 0.1);
+            });
+        });
+        lp.connect(g);
+        g.connect(reverbIn);
+        const dry = ctx.createGain();
+        dry.gain.value = 0.5;
+        g.connect(dry); dry.connect(master);
+    }
+
+    function leadSupersaw(t, f, vel) {
+        // Seven detuned saws → classic trance/uplifting lead
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.16 * vel, t + 0.02);
+        g.gain.setValueAtTime(0.16 * vel, t + 0.28);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = 1;
+        lp.frequency.setValueAtTime(1200, t);
+        lp.frequency.exponentialRampToValueAtTime(4200, t + 0.1);
+        lp.frequency.exponentialRampToValueAtTime(1600, t + 0.45);
+        [-24, -16, -7, 0, 7, 16, 24].forEach(cents => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = f;
+            osc.detune.value = cents;
+            osc.connect(lp);
+            osc.start(t); osc.stop(t + 0.55);
+        });
+        lp.connect(g); g.connect(master); g.connect(reverbIn); g.connect(delayIn);
+    }
+
+    const LEAD_FNS = { pluck: leadPluck, handpan: leadHandpan, acid: leadAcid, stab: leadStab, supersaw: leadSupersaw };
+    const BASS_FNS = { wobble: bassWobble, reese: bassReese, sub: bassSub, stab: bassStab };
+
+    /* ------------------------------ Arrangement ---------------------------- */
+    // 64-bar arc: intro → build → drop A → break → drop B → outro
+
+    function sectionAt(bar) {
+        if (bar < 8)   return { kick: 0, snare: 0, hat: 1, bass: 0, lead: 1, pad: 1, fill: 0 };
+        if (bar < 16)  return { kick: 1, snare: 0, hat: 1, bass: bar >= 12, lead: 1, pad: 1, fill: bar === 15 };
+        if (bar < 32)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: (bar % 8) >= 4, pad: 0, fill: bar === 31 };
+        if (bar < 40)  return { kick: 0, snare: 0, hat: 1, bass: 0, lead: 1, pad: 1, fill: bar === 39 };
+        if (bar < 56)  return { kick: 1, snare: 1, hat: 1, bass: 1, lead: 1, pad: 1, fill: bar === 55 };
+        return { kick: bar < 60, snare: 0, hat: 1, bass: bar < 60, lead: 0, pad: 1, fill: 0 };
+    }
+
+    /* ------------------------------ Scheduler ------------------------------ */
+
+    function scheduleStep(stepIdx, when) {
+        const tr = TRACKS[trackIndex];
+        const P = tr.pat;
+        const spb = stepsPerBeatSec(tr);
+        const bar = Math.floor(stepIdx / 16);
+        const s = stepIdx % 16;
+        let t = when;
+        if (tr.swing && s % 2 === 1) t += spb * tr.swing;
+
+        const sec = sectionAt(bar);
+        const hitSnare = tr.snareType === 'clap' ? clap : snare;
+
+        // Fill: snare roll ramping into the next section
+        if (sec.fill && s >= 8) {
+            hitSnare(t, 0.25 + 0.6 * (s - 8) / 7);
+        }
+
+        if (sec.kick && P.kick[s]) kick(t, P.kick[s], tr.kit);
+        if (sec.snare && P.snare[s]) hitSnare(t, P.snare[s]);
+        if (sec.snare && P.ghost && P.ghost[s]) snare(t, P.ghost[s] * 0.6);
+        if (sec.hat && P.hat[s]) hat(t, P.hat[s], false);
+        if (sec.hat && P.ohat && P.ohat[s]) hat(t, P.ohat[s], true);
+        if (sec.hat && P.shak && P.shak[s]) shaker(t, P.shak[s]);
+
+        if (sec.bass) {
+            const events = P.bass[bar % P.bass.length];
+            for (const ev of events) {
+                if (ev.s === s) {
+                    const f = midiToFreq(tr.root + (ev.n || 0));
+                    const dur = Math.max(ev.len * spb * 0.95, 0.1);
+                    BASS_FNS[tr.bassType](t, f, dur, 0.9, ev.r);
+                }
+            }
+        }
+
+        if (sec.lead) {
+            const pat = P.lead[bar % P.lead.length];
+            const v = pat[s];
+            if (v !== null && v !== undefined) {
+                LEAD_FNS[tr.leadType](t, midiToFreq(tr.root + 24 + v), 0.85);
+            }
+        }
+
+        if (sec.pad && s === 0 && bar % 2 === 0 && P.chords && P.chords.length) {
+            const chord = P.chords[Math.floor(bar / 2) % P.chords.length];
+            padChord(t, chord.map(o => midiToFreq(tr.root + 24 + o)), spb * 32);
+        }
+    }
+
+    function scheduler() {
+        const tr = TRACKS[trackIndex];
+        const spb = stepsPerBeatSec(tr);
+        while (nextNoteTime < ctx.currentTime + SCHEDULE_AHEAD) {
+            if (step >= totalSteps(tr)) {
+                next(); // auto-advance; next() resets timing
+                return;
+            }
+            scheduleStep(step, nextNoteTime);
+            nextNoteTime += spb;
+            step++;
+        }
+    }
+
+    /* ------------------------------ Transport ------------------------------ */
+
+    function play() {
+        init();
+        if (ctx.state === 'suspended') ctx.resume();
+        if (playing) return;
+        playing = true;
+        nextNoteTime = ctx.currentTime + 0.06;
+        timer = setInterval(scheduler, LOOKAHEAD_MS);
+        emit('state', true);
+    }
+
+    function pause() {
+        if (!playing) return;
+        playing = false;
+        clearInterval(timer);
+        timer = null;
+        emit('state', false);
+    }
+
+    function toggle() { playing ? pause() : play(); }
+
+    function setTrack(i) {
+        trackIndex = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+        step = 0;
+        if (ctx) {
+            syncDelayToTempo();
+            if (playing) nextNoteTime = ctx.currentTime + 0.1;
+        }
+        emit('track', trackIndex);
+    }
+
+    function next() { setTrack(trackIndex + 1); }
+    function prev() { setTrack(trackIndex - 1); }
+
+    function seek(fraction) {
+        const tr = TRACKS[trackIndex];
+        step = Math.max(0, Math.min(totalSteps(tr) - 1, Math.floor(fraction * totalSteps(tr))));
+        if (ctx && playing) nextNoteTime = ctx.currentTime + 0.06;
+    }
+
+    function setVolume(v) {
+        volume = Math.max(0, Math.min(1, v));
+        muted = false;
+        if (master) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.02);
+    }
+
+    function toggleMute() {
+        muted = !muted;
+        if (master) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.02);
+        return muted;
+    }
+
+    /* ------------------------------ Introspection -------------------------- */
+
+    function getPosition() {
+        const tr = TRACKS[trackIndex];
+        const spb = stepsPerBeatSec(tr);
+        return {
+            seconds: step * spb,
+            duration: totalSteps(tr) * spb
+        };
+    }
+
+    function getSpectrum() {
+        if (!analyser) return null;
+        analyser.getByteFrequencyData(spectrum);
+        return spectrum;
+    }
+
+    return {
+        TRACKS,
+        on,
+        play, pause, toggle, next, prev, setTrack, seek,
+        setVolume, toggleMute,
+        getPosition, getSpectrum,
+        isPlaying: () => playing,
+        getVolume: () => volume,
+        isMuted: () => muted,
+        currentIndex: () => trackIndex
+    };
+})();
+
+    </script>
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH — Audio-Reactive 3D Background                                   */
+/*                                                                            */
+/* A Three.js wireframe cube grid. When the synthesis engine is playing, each */
+/* cube's height is driven by the real frequency spectrum (radial mapping:    */
+/* bass in the center, highs at the edges). When idle, it breathes gently.    */
+/* -------------------------------------------------------------------------- */
+
+function initThreeJS() {
+    if (typeof THREE === 'undefined') return; // CDN failed — page still works
+
+    const canvas = document.getElementById('bg-canvas');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 30;
+    camera.position.y = 10;
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const particles = new THREE.Group();
+    scene.add(particles);
+
+    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const material = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true, transparent: true, opacity: 0.3 });
+    const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true, transparent: true, opacity: 0.6 });
+
+    const gridSize = 20;
+    const spacing = 2;
+    const cubes = [];
+    const center = (gridSize - 1) / 2;
+    const maxDist = Math.sqrt(2) * center;
+
+    for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+            const useHighlight = Math.random() > 0.9;
+            const mesh = new THREE.Mesh(geometry, useHighlight ? highlightMaterial : material);
+
+            mesh.position.x = (i - gridSize / 2) * spacing;
+            mesh.position.z = (j - gridSize / 2) * spacing;
+            mesh.position.y = 0;
+
+            // Radial frequency mapping: center cubes react to bass,
+            // edge cubes react to highs.
+            const dist = Math.sqrt(Math.pow(i - center, 2) + Math.pow(j - center, 2));
+            mesh.userData = {
+                phaseX: i * 0.2,
+                phaseZ: j * 0.2,
+                bin: 2 + Math.floor((dist / maxDist) * 70)
+            };
+
+            cubes.push(mesh);
+            particles.add(mesh);
+        }
+    }
+
+    // Mouse parallax
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+
+    document.addEventListener('mousemove', (event) => {
+        const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+        const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        targetRotationY = mouseX * 0.2;
+        targetRotationX = -mouseY * 0.1;
+    });
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const clock = new THREE.Clock();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const time = clock.getElapsedTime();
+
+        particles.rotation.y += (targetRotationY - particles.rotation.y) * 0.05;
+        particles.rotation.x += (targetRotationX - particles.rotation.x) * 0.05;
+
+        const playing = typeof AudioEngine !== 'undefined' && AudioEngine.isPlaying();
+        const spectrum = playing ? AudioEngine.getSpectrum() : null;
+
+        cubes.forEach(cube => {
+            let targetY;
+            if (spectrum) {
+                // Real audio data drives the grid
+                const v = spectrum[cube.userData.bin] / 255;
+                targetY = v * v * 9;
+            } else {
+                // Idle: gentle breathing wave
+                targetY = Math.sin(cube.userData.phaseX + time) * Math.cos(cube.userData.phaseZ + time);
+            }
+            cube.position.y += (targetY - cube.position.y) * 0.35;
+            cube.rotation.x = time * 0.5;
+            cube.rotation.y = time * 0.5;
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+}
+
+    </script>
+    <script>
+/* -------------------------------------------------------------------------- */
+/* FREQ/ARCH — App: rendering + UI wiring                                     */
+/* -------------------------------------------------------------------------- */
+
+(() => {
+    'use strict';
+
+    /* ------------------------------ Utilities ------------------------------ */
+
+    const $ = id => document.getElementById(id);
+
+    function esc(str) {
+        const div = document.createElement('div');
+        div.textContent = String(str ?? '');
+        return div.innerHTML;
+    }
+
+    function timeAgo(ts) {
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return 'just now';
+        const m = Math.floor(s / 60);
+        if (m < 60) return `${m}m ago`;
+        const h = Math.floor(m / 60);
+        if (h < 24) return `${h}h ago`;
+        const d = Math.floor(h / 24);
+        if (d < 30) return `${d}d ago`;
+        return new Date(ts).toLocaleDateString();
+    }
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    const VOTES_KEY = 'freqarch_votes_v1';
+    function loadVotes() {
+        try { return JSON.parse(localStorage.getItem(VOTES_KEY)) || []; } catch (e) { return []; }
+    }
+    function saveVotes(v) {
+        try { localStorage.setItem(VOTES_KEY, JSON.stringify(v)); } catch (e) { /* ignore */ }
+    }
+
+    function modeBadge(el) {
+        if (!el) return;
+        if (Store.isCloud()) {
+            el.innerHTML = '<i class="fa-solid fa-globe mr-1"></i> Shared · live';
+            el.className = 'ml-3 text-[10px] font-mono uppercase tracking-widest text-neon-green border border-neon-green/30 bg-neon-green/10 px-3 py-1 rounded-full';
+        } else {
+            el.innerHTML = '<i class="fa-solid fa-hard-drive mr-1"></i> Saved in your browser';
+            el.className = 'ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full';
+        }
+    }
+
+    /* --------------------------- Article sections -------------------------- */
+
+    function renderRabbitHole() {
+        const container = $('rabbit-hole-grid');
+        rabbitHoleData.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "glass-panel p-5 rounded-lg border-l-4 border-neon-cyan flex flex-col sm:flex-row gap-4 items-start sm:items-center hover:bg-white/5 transition-all";
+            card.innerHTML = `
+                <div class="flex-shrink-0 w-16 h-16 bg-black/50 rounded-full flex items-center justify-center border border-white/10 relative overflow-hidden">
+                    <i class="fa-solid fa-compact-disc text-2xl text-neon-purple animate-[spin_10s_linear_infinite]"></i>
+                </div>
+                <div>
+                    <h4 class="text-xl font-bold text-white m-0">
+                        ${esc(item.successor)}
+                        <span class="text-xs font-normal text-gray-500 ml-2 border border-gray-600 px-2 py-1 rounded-full">FF: ${esc(item.pioneer)}</span>
+                    </h4>
+                    <p class="text-sm text-gray-400 mt-2 mb-0 leading-relaxed">${esc(item.desc)}</p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function renderAnalytics() {
+        const tbody = $('analytics-tbody');
+        analyticsData.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-white/5 transition-colors";
+            tr.innerHTML = `
+                <th scope="row" class="px-6 py-4 font-bold text-white whitespace-nowrap">${esc(row.artist)}</th>
+                <td class="px-6 py-4 text-neon-cyan">${esc(row.subgenre)}</td>
+                <td class="px-6 py-4 text-gray-300">${esc(row.pop)}</td>
+                <td class="px-6 py-4 text-gray-400 text-xs">${esc(row.diff)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    /* ------------------------------ Blog ----------------------------------- */
+
+    function renderBlog() {
+        const grid = $('blog-grid');
+        blogPosts.forEach(post => {
+            const card = document.createElement('article');
+            card.className = "blog-card glass-panel rounded-xl overflow-hidden hover:border-neon-cyan/40 transition-colors";
+            const dateStr = new Date(post.date + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+            card.innerHTML = `
+                <button class="blog-header w-full text-left p-6 flex items-start justify-between gap-4 cursor-pointer group" aria-expanded="false">
+                    <div>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            ${post.tags.map(t => `<span class="text-[10px] uppercase tracking-widest text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/20 px-2 py-0.5 rounded-full">${esc(t)}</span>`).join('')}
+                        </div>
+                        <h3 class="text-xl md:text-2xl font-display font-bold text-white m-0 group-hover:text-neon-cyan transition-colors">${esc(post.title)}</h3>
+                        <p class="text-xs text-gray-500 font-mono mt-2 mb-3">${esc(dateStr)} · ${esc(post.author)} · ${esc(post.readTime)} read</p>
+                        <p class="text-sm text-gray-400 m-0 leading-relaxed">${esc(post.excerpt)}</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down blog-toggle-icon text-gray-500 mt-2 flex-shrink-0"></i>
+                </button>
+                <div class="blog-body px-6 pb-6">
+                    <div class="border-t border-white/10 pt-5 prose prose-invert prose-sm max-w-none prose-p:text-gray-300 prose-strong:text-white prose-em:text-neon-cyan">
+                        ${post.body}
+                    </div>
+                </div>
+            `;
+            card.querySelector('.blog-header').addEventListener('click', () => {
+                const isOpen = card.classList.toggle('open');
+                card.querySelector('.blog-header').setAttribute('aria-expanded', isOpen);
+            });
+            grid.appendChild(card);
+        });
+    }
+
+    /* --------------------------- Living Archive ---------------------------- */
+
+    const TAB_CONFIG = {
+        moments: {
+            formTitle: 'Log a Defining Moment',
+            f1: 'Moment Title *', f1ph: 'e.g. The Belleville Three invent techno',
+            f2: 'Year', f2ph: 'e.g. 1985',
+            text: 'Why It Mattered *', textph: 'Tell the story...',
+            icon: 'fa-clock-rotate-left', chipColor: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10'
+        },
+        artists: {
+            formTitle: 'Nominate an Artist for the Spotlight',
+            f1: 'Artist Name *', f1ph: 'e.g. Djrum',
+            f2: 'Genre', f2ph: 'e.g. Halftime DnB',
+            text: 'Why They Deserve the Light *', textph: 'Make the case...',
+            icon: 'fa-star', chipColor: 'text-neon-purple border-neon-purple/30 bg-neon-purple/10'
+        },
+        tracks: {
+            formTitle: 'Submit a Track That Must Be Heard',
+            f1: 'Track Title *', f1ph: 'e.g. Brown Paper Bag',
+            f2: 'Artist', f2ph: 'e.g. Roni Size',
+            text: 'Why It Needs to Be Played *', textph: 'What makes it essential...',
+            icon: 'fa-record-vinyl', chipColor: 'text-neon-cyan border-neon-cyan/30 bg-neon-cyan/10'
+        }
+    };
+
+    let archiveCache = { moments: [], artists: [], tracks: [] };
+    let votedIds = loadVotes();
+    let activeTab = 'moments';
+
+    async function refreshArchive(flashId) {
+        archiveCache = await Store.getArchive();
+        renderArchive(flashId);
+    }
+
+    function renderArchive(flashId) {
+        const list = $('archive-list');
+        list.innerHTML = '';
+        const cfg = TAB_CONFIG[activeTab];
+        const items = [...(archiveCache[activeTab] || [])].sort((a, b) => (b.votes - a.votes) || (b.ts - a.ts));
+
+        if (!items.length) {
+            list.innerHTML = `<p class="text-gray-500 text-sm font-mono text-center py-8">// no entries yet — be the first to commit to the archive</p>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const voted = votedIds.includes(item.id);
+            const div = document.createElement('div');
+            div.className = "glass-panel p-5 rounded-lg flex gap-4 items-start" + (item.id === flashId ? ' archive-flash' : '');
+            div.innerHTML = `
+                <button class="vote-btn ${voted ? 'voted' : ''} flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-lg border border-white/10 bg-black/30 text-gray-400" data-id="${esc(item.id)}" ${voted ? 'disabled' : ''} aria-label="Upvote">
+                    <i class="fa-solid fa-chevron-up text-xs"></i>
+                    <span class="font-display font-bold text-sm">${item.votes}</span>
+                </button>
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <h4 class="text-white font-bold m-0 text-base">
+                            ${activeTab === 'tracks' && item.f2 ? `${esc(item.f2)} — ${esc(item.f1)}` : esc(item.f1)}
+                        </h4>
+                        ${item.f2 && activeTab !== 'tracks' ? `<span class="text-[10px] uppercase tracking-widest border px-2 py-0.5 rounded-full ${cfg.chipColor}">${esc(item.f2)}</span>` : ''}
+                    </div>
+                    <p class="text-sm text-gray-300 m-0 leading-relaxed">${esc(item.text)}</p>
+                    <p class="text-[11px] text-gray-500 font-mono mt-2 mb-0">
+                        <i class="fa-solid ${cfg.icon} mr-1"></i>${esc(item.handle || 'Anonymous Raver')} · ${timeAgo(item.ts)}
+                    </p>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+
+        list.querySelectorAll('.vote-btn:not(.voted)').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.id;
+                if (votedIds.includes(id)) return;
+                // Optimistic UI
+                const item = archiveCache[activeTab].find(x => x.id === id);
+                if (item) item.votes++;
+                votedIds.push(id);
+                saveVotes(votedIds);
+                renderArchive();
+                await Store.voteArchive(activeTab, id);
+                refreshArchive();
+            });
+        });
+    }
+
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.archive-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        const cfg = TAB_CONFIG[tab];
+        $('archive-form-title').textContent = cfg.formTitle;
+        $('archive-f1-label').textContent = cfg.f1;
+        $('archive-f1').placeholder = cfg.f1ph;
+        $('archive-f2-label').textContent = cfg.f2;
+        $('archive-f2').placeholder = cfg.f2ph;
+        $('archive-text-label').textContent = cfg.text;
+        $('archive-text').placeholder = cfg.textph;
+        renderArchive();
+    }
+
+    async function initArchive() {
+        document.querySelectorAll('.archive-tab').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+        $('archive-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const f1 = $('archive-f1').value.trim();
+            const f2 = $('archive-f2').value.trim();
+            const text = $('archive-text').value.trim();
+            const handle = $('archive-handle').value.trim() || 'Anonymous Raver';
+            if (!f1 || !text) return;
+
+            const submitBtn = $('archive-form').querySelector('button[type=submit]');
+            submitBtn.disabled = true;
+            const id = await Store.addArchiveItem(activeTab, { f1, f2, text, handle });
+            votedIds.push(id); // your own submission carries your vote
+            saveVotes(votedIds);
+            $('archive-form').reset();
+            submitBtn.disabled = false;
+            await refreshArchive(id);
+        });
+
+        switchTab('moments');
+        modeBadge($('archive-mode'));
+        await refreshArchive();
+    }
+
+    /* ------------------------------ Comments -------------------------------- */
+
+    let comments = [];
+
+    function renderComments() {
+        const list = $('comments-list');
+        list.innerHTML = '';
+        $('comment-count').textContent = `${comments.length} transmission${comments.length === 1 ? '' : 's'}`;
+
+        [...comments].sort((a, b) => b.ts - a.ts).forEach(comment => {
+            const div = document.createElement('div');
+            div.className = "glass-panel p-5 rounded-lg border-l border-white/10 relative overflow-hidden group";
+            div.innerHTML = `
+                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-neon-cyan to-neon-purple opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-dark border border-white/20 flex items-center justify-center text-neon-cyan font-display font-bold text-sm">
+                            ${esc(comment.name.charAt(0).toUpperCase())}
+                        </div>
+                        <div>
+                            <h5 class="text-white font-bold text-sm m-0">${esc(comment.name)}</h5>
+                            ${comment.genre ? `<span class="text-[10px] text-neon-magenta uppercase tracking-wider">${esc(comment.genre)}</span>` : ''}
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-500 font-mono">${timeAgo(comment.ts)}</span>
+                </div>
+                <p class="text-sm text-gray-300 m-0">${esc(comment.text)}</p>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    async function initComments() {
+        $('comment-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const name = $('c-name').value.trim();
+            const genre = $('c-genre').value.trim();
+            const text = $('c-text').value.trim();
+            if (!name || !text) return;
+
+            const submitBtn = $('comment-form').querySelector('button[type=submit]');
+            submitBtn.disabled = true;
+            await Store.addComment({ name, genre, text });
+            $('comment-form').reset();
+            submitBtn.disabled = false;
+            comments = await Store.getComments();
+            renderComments();
+        });
+
+        modeBadge($('comments-mode'));
+        comments = await Store.getComments();
+        renderComments();
+    }
+
+    /* ------------------------------ Player UI ------------------------------- */
+
+    function initPlayerUI() {
+        const playIcon = $('play-icon');
+        const playlistMenu = $('playlist-menu');
+        const playlistList = $('playlist-list');
+        const badge = $('engine-badge');
+
+        function loadTrackUI(index) {
+            const track = AudioEngine.TRACKS[index];
+            $('track-title').textContent = track.title;
+            $('track-genre').textContent = `${track.genre} · after ${track.inspiredBy}`;
+            const pos = AudioEngine.getPosition();
+            $('time-total').textContent = formatTime(pos.duration);
+            highlightPlaylistItem(index);
+        }
+
+        function highlightPlaylistItem(index) {
+            playlistList.querySelectorAll('li').forEach((item, i) => {
+                const active = i === index;
+                item.classList.toggle('text-neon-cyan', active);
+                item.classList.toggle('bg-white/10', active);
+                item.classList.toggle('text-gray-400', !active);
+                const eq = item.querySelector('.eq');
+                if (eq) eq.style.display = (active && AudioEngine.isPlaying()) ? 'inline-flex' : 'none';
+            });
+        }
+
+        AudioEngine.TRACKS.forEach((track, index) => {
+            const li = document.createElement('li');
+            li.className = "px-3 py-2 rounded cursor-pointer hover:bg-white/5 transition-colors text-gray-400 flex items-center justify-between gap-2";
+            li.innerHTML = `
+                <div class="min-w-0">
+                    <span class="font-bold block truncate">${esc(track.title)}</span>
+                    <span class="text-[10px] font-mono text-gray-500 block truncate">${esc(track.genre)} · after ${esc(track.inspiredBy)}</span>
+                </div>
+                <span class="eq flex-shrink-0" style="display:none"><span></span><span></span><span></span></span>
+            `;
+            li.addEventListener('click', () => {
+                AudioEngine.setTrack(index);
+                if (!AudioEngine.isPlaying()) AudioEngine.play();
+            });
+            playlistList.appendChild(li);
+        });
+
+        AudioEngine.on('track', loadTrackUI);
+        AudioEngine.on('state', isPlaying => {
+            playIcon.classList.toggle('fa-play', !isPlaying);
+            playIcon.classList.toggle('fa-pause', isPlaying);
+            playIcon.classList.toggle('ml-1', !isPlaying);
+            badge.textContent = isPlaying ? 'SYNTH: LIVE' : 'SYNTH: IDLE';
+            badge.classList.toggle('text-neon-green', isPlaying);
+            badge.classList.toggle('border-neon-green/40', isPlaying);
+            badge.classList.toggle('text-gray-500', !isPlaying);
+            highlightPlaylistItem(AudioEngine.currentIndex());
+        });
+
+        $('btn-play').addEventListener('click', () => AudioEngine.toggle());
+        $('btn-prev').addEventListener('click', () => AudioEngine.prev());
+        $('btn-next').addEventListener('click', () => AudioEngine.next());
+        const heroBtn = $('hero-play-btn');
+        if (heroBtn) heroBtn.addEventListener('click', () => {
+            AudioEngine.play();
+            heroBtn.innerHTML = '<i class="fa-solid fa-wave-square mr-2"></i> Engine Running';
+        });
+
+        $('btn-playlist').addEventListener('click', e => {
+            e.stopPropagation();
+            playlistMenu.classList.toggle('hidden');
+        });
+        document.addEventListener('click', e => {
+            if (!playlistMenu.classList.contains('hidden') && !playlistMenu.contains(e.target)) {
+                playlistMenu.classList.add('hidden');
+            }
+        });
+
+        $('progress-container').addEventListener('click', e => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            AudioEngine.seek((e.clientX - rect.left) / rect.width);
+        });
+
+        const volContainer = $('volume-container');
+        const volBar = $('volume-bar');
+        const volIcon = $('vol-icon');
+
+        function setVolFromEvent(e) {
+            const rect = volContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const v = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            AudioEngine.setVolume(v);
+            volBar.style.width = `${v * 100}%`;
+            volBar.style.opacity = 1;
+            updateVolIcon(v, false);
+        }
+
+        function updateVolIcon(v, isMuted) {
+            volIcon.className = 'fa-solid text-sm ' + (
+                isMuted || v === 0 ? 'fa-volume-xmark' : v < 0.5 ? 'fa-volume-low' : 'fa-volume-high'
+            );
+        }
+
+        let dragging = false;
+        volContainer.addEventListener('pointerdown', e => { dragging = true; setVolFromEvent(e); });
+        document.addEventListener('pointermove', e => { if (dragging) setVolFromEvent(e); });
+        document.addEventListener('pointerup', () => { dragging = false; });
+
+        $('btn-mute').addEventListener('click', () => {
+            const muted = AudioEngine.toggleMute();
+            updateVolIcon(AudioEngine.getVolume(), muted);
+            volBar.style.opacity = muted ? 0.3 : 1;
+        });
+
+        const miniBars = Array.from($('mini-viz').children);
+        const bands = [[1, 4], [5, 12], [13, 28], [29, 52], [53, 90]];
+
+        function tick() {
+            const pos = AudioEngine.getPosition();
+            $('progress-bar').style.width = `${Math.min(100, (pos.seconds / pos.duration) * 100)}%`;
+            $('time-current').textContent = formatTime(Math.min(pos.seconds, pos.duration));
+            $('time-total').textContent = formatTime(pos.duration);
+
+            const spectrum = AudioEngine.isPlaying() ? AudioEngine.getSpectrum() : null;
+            miniBars.forEach((bar, i) => {
+                if (spectrum) {
+                    const [lo, hi] = bands[i];
+                    let sum = 0;
+                    for (let b = lo; b <= hi; b++) sum += spectrum[b];
+                    const avg = sum / (hi - lo + 1) / 255;
+                    bar.style.height = `${Math.max(8, avg * 100)}%`;
+                } else {
+                    bar.style.height = '10%';
+                }
+            });
+
+            requestAnimationFrame(tick);
+        }
+
+        loadTrackUI(0);
+        tick();
+    }
+
+    /* ------------------------------ Chrome ---------------------------------- */
+
+    function setupScrollEffects() {
+        const navbar = $('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('bg-[#13131f]/90', window.scrollY > 50);
+            navbar.classList.toggle('shadow-lg', window.scrollY > 50);
+        });
+    }
+
+    function setupMobileMenu() {
+        const btn = $('mobile-menu-btn');
+        const menu = $('mobile-menu');
+        btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+        menu.querySelectorAll('.mobile-link').forEach(a => {
+            a.addEventListener('click', () => menu.classList.add('hidden'));
+        });
+    }
+
+    /* ------------------------------ Boot ------------------------------------ */
+
+    document.addEventListener('DOMContentLoaded', () => {
+        try { initThreeJS(); } catch (e) { console.warn('3D background unavailable:', e); }
+        renderRabbitHole();
+        renderAnalytics();
+        renderBlog();
+        initPlayerUI();
+        setupScrollEffects();
+        setupMobileMenu();
+        // Async, backend-aware sections (cloud or local)
+        initArchive().catch(e => console.warn('archive init failed', e));
+        initComments().catch(e => console.warn('comments init failed', e));
+    });
+})();
+
+    </script>
+</body>
+</html>

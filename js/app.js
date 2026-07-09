@@ -15,10 +15,6 @@
         return div.innerHTML;
     }
 
-    function uid() {
-        return (crypto.randomUUID ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2));
-    }
-
     function timeAgo(ts) {
         const s = Math.floor((Date.now() - ts) / 1000);
         if (s < 60) return 'just now';
@@ -31,23 +27,29 @@
         return new Date(ts).toLocaleDateString();
     }
 
-    function loadStore(key, fallback) {
-        try {
-            const raw = localStorage.getItem(key);
-            return raw ? JSON.parse(raw) : fallback;
-        } catch (e) {
-            return fallback;
-        }
-    }
-
-    function saveStore(key, value) {
-        try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* private mode etc. */ }
-    }
-
     function formatTime(seconds) {
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
         return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    const VOTES_KEY = 'freqarch_votes_v1';
+    function loadVotes() {
+        try { return JSON.parse(localStorage.getItem(VOTES_KEY)) || []; } catch (e) { return []; }
+    }
+    function saveVotes(v) {
+        try { localStorage.setItem(VOTES_KEY, JSON.stringify(v)); } catch (e) { /* ignore */ }
+    }
+
+    function modeBadge(el) {
+        if (!el) return;
+        if (Store.isCloud()) {
+            el.innerHTML = '<i class="fa-solid fa-globe mr-1"></i> Shared · live';
+            el.className = 'ml-3 text-[10px] font-mono uppercase tracking-widest text-neon-green border border-neon-green/30 bg-neon-green/10 px-3 py-1 rounded-full';
+        } else {
+            el.innerHTML = '<i class="fa-solid fa-hard-drive mr-1"></i> Saved in your browser';
+            el.className = 'ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full';
+        }
     }
 
     /* --------------------------- Article sections -------------------------- */
@@ -124,9 +126,6 @@
 
     /* --------------------------- Living Archive ---------------------------- */
 
-    const ARCHIVE_KEY = 'freqarch_archive_v1';
-    const VOTES_KEY = 'freqarch_votes_v1';
-
     const TAB_CONFIG = {
         moments: {
             formTitle: 'Log a Defining Moment',
@@ -151,19 +150,20 @@
         }
     };
 
-    let archive = loadStore(ARCHIVE_KEY, null);
-    if (!archive) {
-        archive = JSON.parse(JSON.stringify(seedArchive));
-        saveStore(ARCHIVE_KEY, archive);
-    }
-    let votedIds = loadStore(VOTES_KEY, []);
+    let archiveCache = { moments: [], artists: [], tracks: [] };
+    let votedIds = loadVotes();
     let activeTab = 'moments';
+
+    async function refreshArchive(flashId) {
+        archiveCache = await Store.getArchive();
+        renderArchive(flashId);
+    }
 
     function renderArchive(flashId) {
         const list = $('archive-list');
         list.innerHTML = '';
         const cfg = TAB_CONFIG[activeTab];
-        const items = [...(archive[activeTab] || [])].sort((a, b) => (b.votes - a.votes) || (b.ts - a.ts));
+        const items = [...(archiveCache[activeTab] || [])].sort((a, b) => (b.votes - a.votes) || (b.ts - a.ts));
 
         if (!items.length) {
             list.innerHTML = `<p class="text-gray-500 text-sm font-mono text-center py-8">// no entries yet — be the first to commit to the archive</p>`;
@@ -196,15 +196,17 @@
         });
 
         list.querySelectorAll('.vote-btn:not(.voted)').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
-                const item = archive[activeTab].find(x => x.id === id);
-                if (!item || votedIds.includes(id)) return;
-                item.votes++;
+                if (votedIds.includes(id)) return;
+                // Optimistic UI
+                const item = archiveCache[activeTab].find(x => x.id === id);
+                if (item) item.votes++;
                 votedIds.push(id);
-                saveStore(ARCHIVE_KEY, archive);
-                saveStore(VOTES_KEY, votedIds);
+                saveVotes(votedIds);
                 renderArchive();
+                await Store.voteArchive(activeTab, id);
+                refreshArchive();
             });
         });
     }
@@ -225,39 +227,37 @@
         renderArchive();
     }
 
-    function initArchive() {
+    async function initArchive() {
         document.querySelectorAll('.archive-tab').forEach(btn => {
             btn.addEventListener('click', () => switchTab(btn.dataset.tab));
         });
 
-        $('archive-form').addEventListener('submit', e => {
+        $('archive-form').addEventListener('submit', async e => {
             e.preventDefault();
             const f1 = $('archive-f1').value.trim();
             const f2 = $('archive-f2').value.trim();
             const text = $('archive-text').value.trim();
-            const handle = $('archive-handle').value.trim();
+            const handle = $('archive-handle').value.trim() || 'Anonymous Raver';
             if (!f1 || !text) return;
 
-            const item = { id: uid(), f1, f2, text, handle: handle || 'Anonymous Raver', votes: 1, ts: Date.now() };
-            archive[activeTab].unshift(item);
-            votedIds.push(item.id); // your own submission carries your vote
-            saveStore(ARCHIVE_KEY, archive);
-            saveStore(VOTES_KEY, votedIds);
+            const submitBtn = $('archive-form').querySelector('button[type=submit]');
+            submitBtn.disabled = true;
+            const id = await Store.addArchiveItem(activeTab, { f1, f2, text, handle });
+            votedIds.push(id); // your own submission carries your vote
+            saveVotes(votedIds);
             $('archive-form').reset();
-            renderArchive(item.id);
+            submitBtn.disabled = false;
+            await refreshArchive(id);
         });
 
         switchTab('moments');
+        modeBadge($('archive-mode'));
+        await refreshArchive();
     }
 
     /* ------------------------------ Comments -------------------------------- */
 
-    const COMMENTS_KEY = 'freqarch_comments_v1';
-    let comments = loadStore(COMMENTS_KEY, null);
-    if (!comments) {
-        comments = [...seedComments];
-        saveStore(COMMENTS_KEY, comments);
-    }
+    let comments = [];
 
     function renderComments() {
         const list = $('comments-list');
@@ -287,19 +287,25 @@
         });
     }
 
-    function initComments() {
-        $('comment-form').addEventListener('submit', e => {
+    async function initComments() {
+        $('comment-form').addEventListener('submit', async e => {
             e.preventDefault();
             const name = $('c-name').value.trim();
             const genre = $('c-genre').value.trim();
             const text = $('c-text').value.trim();
             if (!name || !text) return;
 
-            comments.push({ id: uid(), name, genre, text, ts: Date.now() });
-            saveStore(COMMENTS_KEY, comments);
-            renderComments();
+            const submitBtn = $('comment-form').querySelector('button[type=submit]');
+            submitBtn.disabled = true;
+            await Store.addComment({ name, genre, text });
             $('comment-form').reset();
+            submitBtn.disabled = false;
+            comments = await Store.getComments();
+            renderComments();
         });
+
+        modeBadge($('comments-mode'));
+        comments = await Store.getComments();
         renderComments();
     }
 
@@ -331,7 +337,6 @@
             });
         }
 
-        // Populate playlist
         AudioEngine.TRACKS.forEach((track, index) => {
             const li = document.createElement('li');
             li.className = "px-3 py-2 rounded cursor-pointer hover:bg-white/5 transition-colors text-gray-400 flex items-center justify-between gap-2";
@@ -349,7 +354,6 @@
             playlistList.appendChild(li);
         });
 
-        // Engine events → UI
         AudioEngine.on('track', loadTrackUI);
         AudioEngine.on('state', isPlaying => {
             playIcon.classList.toggle('fa-play', !isPlaying);
@@ -362,7 +366,6 @@
             highlightPlaylistItem(AudioEngine.currentIndex());
         });
 
-        // Transport controls
         $('btn-play').addEventListener('click', () => AudioEngine.toggle());
         $('btn-prev').addEventListener('click', () => AudioEngine.prev());
         $('btn-next').addEventListener('click', () => AudioEngine.next());
@@ -382,13 +385,11 @@
             }
         });
 
-        // Scrubbing
         $('progress-container').addEventListener('click', e => {
             const rect = e.currentTarget.getBoundingClientRect();
             AudioEngine.seek((e.clientX - rect.left) / rect.width);
         });
 
-        // Volume (click + drag)
         const volContainer = $('volume-container');
         const volBar = $('volume-bar');
         const volIcon = $('vol-icon');
@@ -399,6 +400,7 @@
             const v = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
             AudioEngine.setVolume(v);
             volBar.style.width = `${v * 100}%`;
+            volBar.style.opacity = 1;
             updateVolIcon(v, false);
         }
 
@@ -419,9 +421,7 @@
             volBar.style.opacity = muted ? 0.3 : 1;
         });
 
-        // Progress + mini visualizer loop
         const miniBars = Array.from($('mini-viz').children);
-        // Frequency band per bar: sub, low-mid, mid, high-mid, high
         const bands = [[1, 4], [5, 12], [13, 28], [29, 52], [53, 90]];
 
         function tick() {
@@ -476,10 +476,11 @@
         renderRabbitHole();
         renderAnalytics();
         renderBlog();
-        initArchive();
-        initComments();
         initPlayerUI();
         setupScrollEffects();
         setupMobileMenu();
+        // Async, backend-aware sections (cloud or local)
+        initArchive().catch(e => console.warn('archive init failed', e));
+        initComments().catch(e => console.warn('comments init failed', e));
     });
 })();

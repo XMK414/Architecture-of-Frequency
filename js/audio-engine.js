@@ -163,6 +163,80 @@ const AudioEngine = (() => {
                 ],
                 chords: [[0,3,7],[-4,0,5]]
             }
+        },
+        {
+            id: 'garage',
+            title: '2-Step Cathedral',
+            genre: 'UK Garage · 132 BPM',
+            inspiredBy: 'the pirate-radio lineage of DnB & house',
+            bpm: 132, bars: 64, root: 33, swing: 0.16,
+            bassType: 'stab', leadType: 'stab', snareType: 'clap',
+            kit: { pitch: 140, floor: 46, decay: 0.32 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+                snare: [0,0,0,0, 0.9,0,0,0, 0,0,0,0, 0.9,0,0,0.4],
+                hat:   [0.2,0.1,0.35,0.15, 0.2,0.1,0.35,0.15, 0.2,0.1,0.35,0.15, 0.2,0.1,0.4,0.2],
+                ohat:  [0,0,0,0, 0,0,0.5,0, 0,0,0,0, 0,0,0.5,0],
+                shak:  [0.12,0.14,0.1,0.16, 0.12,0.14,0.1,0.16, 0.12,0.14,0.1,0.16, 0.12,0.14,0.12,0.18],
+                bass: [
+                    [{s:0,n:0,len:2},{s:5,n:0,len:1},{s:8,n:5,len:2},{s:11,n:3,len:1},{s:14,n:7,len:2}],
+                    [{s:0,n:-2,len:2},{s:5,n:-2,len:1},{s:8,n:3,len:2},{s:11,n:5,len:1},{s:14,n:10,len:2}]
+                ],
+                lead: [
+                    [null,null,12,null, 15,null,null,12, null,10,null,null, 7,null,null,null],
+                    [null,null,17,null, 15,null,null,12, null,10,null,7, null,null,10,null]
+                ],
+                chords: [[0,3,7,10],[-2,2,5,10],[-4,0,3,8],[-2,2,5,10]]
+            }
+        },
+        {
+            id: 'trance',
+            title: 'Aurora Ascension',
+            genre: 'Uplifting Trance · 138 BPM',
+            inspiredBy: 'the melodic-festival main stage',
+            bpm: 138, bars: 64, root: 33, swing: 0,
+            bassType: 'sub', leadType: 'supersaw', snareType: 'clap',
+            kit: { pitch: 145, floor: 44, decay: 0.4 },
+            pat: {
+                kick:  [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+                snare: [0,0,0,0, 0.7,0,0,0, 0,0,0,0, 0.7,0,0,0],
+                hat:   [0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0, 0,0,0.5,0.3],
+                ohat:  [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0.4,0],
+                bass: [
+                    [{s:2,n:0,len:1},{s:4,n:0,len:1},{s:6,n:0,len:1},{s:8,n:0,len:1},{s:10,n:0,len:1},{s:12,n:0,len:1},{s:14,n:0,len:1}],
+                    [{s:2,n:-4,len:1},{s:4,n:-4,len:1},{s:6,n:-4,len:1},{s:8,n:-4,len:1},{s:10,n:-4,len:1},{s:12,n:-4,len:1},{s:14,n:-4,len:1}]
+                ],
+                lead: [
+                    [0,null,null,null, 7,null,3,null, null,null,10,null, 7,null,null,null],
+                    [12,null,null,10, null,7,null,null, 3,null,null,7, null,10,null,12]
+                ],
+                chords: [[0,3,7,12],[-4,3,8,12],[-2,5,10,14],[-4,0,7,12]]
+            }
+        },
+        {
+            id: 'triphop',
+            title: 'Dust & Vinyl',
+            genre: 'Trip-Hop / Downtempo · 88 BPM',
+            inspiredBy: 'Duke Mushroom / the Warriors era',
+            bpm: 88, bars: 64, root: 31, swing: 0.12,
+            bassType: 'sub', leadType: 'handpan', snareType: 'snare',
+            kit: { pitch: 110, floor: 40, decay: 0.55 },
+            pat: {
+                kick:  [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+                snare: [0,0,0,0, 0,0,0,0, 0.75,0,0,0, 0,0,0,0],
+                hat:   [0.25,0,0.18,0.22, 0.25,0,0.18,0.22, 0.25,0,0.18,0.22, 0.25,0,0.2,0.24],
+                ohat:  [0,0,0,0, 0,0,0.3,0, 0,0,0,0, 0,0,0.3,0],
+                shak:  [0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.08, 0.1,0.08,0.12,0.1],
+                bass: [
+                    [{s:0,n:0,len:6},{s:8,n:3,len:3},{s:11,n:-2,len:5}],
+                    [{s:0,n:-4,len:6},{s:8,n:0,len:3},{s:11,n:3,len:5}]
+                ],
+                lead: [
+                    [12,null,null,null, null,null,15,null, null,10,null,null, 7,null,null,null],
+                    [null,null,10,null, 12,null,null,null, 15,null,null,10, null,null,7,null]
+                ],
+                chords: [[0,3,7,10],[-4,0,3,7]]
+            }
         }
     ];
 
@@ -547,7 +621,30 @@ const AudioEngine = (() => {
         g.connect(dry); dry.connect(master);
     }
 
-    const LEAD_FNS = { pluck: leadPluck, handpan: leadHandpan, acid: leadAcid, stab: leadStab };
+    function leadSupersaw(t, f, vel) {
+        // Seven detuned saws → classic trance/uplifting lead
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.16 * vel, t + 0.02);
+        g.gain.setValueAtTime(0.16 * vel, t + 0.28);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.Q.value = 1;
+        lp.frequency.setValueAtTime(1200, t);
+        lp.frequency.exponentialRampToValueAtTime(4200, t + 0.1);
+        lp.frequency.exponentialRampToValueAtTime(1600, t + 0.45);
+        [-24, -16, -7, 0, 7, 16, 24].forEach(cents => {
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = f;
+            osc.detune.value = cents;
+            osc.connect(lp);
+            osc.start(t); osc.stop(t + 0.55);
+        });
+        lp.connect(g); g.connect(master); g.connect(reverbIn); g.connect(delayIn);
+    }
+
+    const LEAD_FNS = { pluck: leadPluck, handpan: leadHandpan, acid: leadAcid, stab: leadStab, supersaw: leadSupersaw };
     const BASS_FNS = { wobble: bassWobble, reese: bassReese, sub: bassSub, stab: bassStab };
 
     /* ------------------------------ Arrangement ---------------------------- */

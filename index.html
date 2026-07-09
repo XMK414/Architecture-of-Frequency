@@ -254,8 +254,9 @@
 
         <!-- ==================== COMMUNITY: THE LIVING ARCHIVE ==================== -->
         <section id="archive" class="scroll-mt-24 mt-20 border-t border-white/10 pt-12">
-            <h2 class="text-3xl font-display font-bold text-white mb-2 flex items-center">
+            <h2 class="text-3xl font-display font-bold text-white mb-2 flex items-center flex-wrap">
                 <i class="fa-solid fa-box-archive text-yellow-400 mr-4"></i> The Living Archive
+                <span id="archive-mode" class="ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full"></span>
             </h2>
             <p class="text-gray-400 mb-8">
                 History is written by the crowd. Submit the <strong class="text-white">moments</strong> that shaped this industry, the <strong class="text-white">artists</strong> who deserve the spotlight, and the <strong class="text-white">tracks</strong> that need to be heard. Upvote what resonates — the community decides what rises.
@@ -314,6 +315,7 @@
             <h3 class="text-2xl font-display font-bold text-white mb-8 flex items-center">
                 <i class="fa-regular fa-comments text-neon-cyan mr-3"></i> Frequency Feedback
                 <span id="comment-count" class="ml-3 text-xs font-mono text-gray-500 border border-white/10 rounded-full px-3 py-1"></span>
+                <span id="comments-mode" class="ml-3 text-[10px] font-mono uppercase tracking-widest text-gray-500 border border-white/10 px-3 py-1 rounded-full"></span>
             </h3>
 
             <!-- Comment Form -->
@@ -427,7 +429,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <!-- App -->
+    <script src="js/config.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/store.js"></script>
     <script src="js/audio-engine.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/app.js"></script>

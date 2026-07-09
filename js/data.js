@@ -84,6 +84,36 @@ const blogPosts = [
             <p>Connect the dots — Chicago's warehouses, Milwaukee's theatres, Drop Bass Network's farmland raves, Rockford's record stores — and you get a self-sustaining regional circulatory system that never needed coastal validation. The artists surfaced in this site's analysis (Gettoblaster, Uriah G, Derek Fer Real, Mario Massa) are simply the current blood cells moving through fifty-year-old veins.</p>
             <p>Support your local venue. The next Daft Punk booking is already on some regional promoter's whiteboard, and it will not be announced on a mainstage LED wall.</p>
         `
+    },
+    {
+        id: "tb303-acid",
+        title: "The 303 That Failed Its Way Into History",
+        date: "2026-04-26",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Acid House", "Roland", "Gear", "History"],
+        readTime: "6 min",
+        excerpt: "Roland built the TB-303 to be a bass guitar for lonely guitarists. It was a commercial flop, discontinued in two years — and then Chicago kids found it in pawn shops and accidentally invented acid house.",
+        body: `
+            <p>In 1981, Roland released the <strong>TB-303 Bass Line</strong>: a small silver box meant to replace a bass player for practicing guitarists. It was hard to program, its "bass" sounded nothing like a real bass, and musicians hated it. Roland discontinued it in 1984 after selling only around 10,000 units. By every metric that mattered to its makers, the 303 was a failure.</p>
+            <p>Then it landed in Chicago pawn shops for cheap. Around 1985–87, producers — most famously <strong>DJ Pierre</strong> and <strong>Phuture</strong> on the track <em>"Acid Tracks"</em> — began twisting the 303's resonance and cutoff knobs while a pattern looped, discovering a squelching, liquid, mutating tone the machine was never designed to make. That sound became a genre: <strong>acid house</strong>. The resonant filter sweep is now one of the most recognizable gestures in all of electronic music.</p>
+            <p>The 303's rehabilitation is the perfect parable for this entire culture: value isn't defined by the manufacturer, the label, or the charts — it's defined by the people on the floor who hear something the designers never intended and refuse to let it go. The same silver box that Roland couldn't give away now sells for thousands, and every software studio ships an emulation of it.</p>
+            <p>The "Rust Belt Ritual" session in this site's engine runs an acid-style resonant filter sweep on its lead line — a small nod to the failed machine that would not die. Twist an imaginary knob while it plays.</p>
+        `
+    },
+    {
+        id: "detroit-belleville",
+        title: "The Belleville Three: Techno as Science Fiction",
+        date: "2026-04-08",
+        author: "FREQ/ARCH Editorial",
+        tags: ["Detroit", "Techno", "History", "Futurism"],
+        readTime: "6 min",
+        excerpt: "Three friends from a Detroit suburb, raised on Kraftwerk, Parliament, and a radio DJ called The Electrifying Mojo, imagined a machine-made music for a post-industrial future — and named it techno.",
+        body: `
+            <p>Techno did not begin in a warehouse or a club. It began among three friends at <strong>Belleville High School</strong>, a mostly white suburb outside Detroit, in the late 1970s and early 80s. <strong>Juan Atkins</strong>, <strong>Derrick May</strong>, and <strong>Kevin Saunderson</strong> — the <strong>Belleville Three</strong> — bonded over an unlikely record collection: Kraftwerk's clinical electronics, Parliament-Funkadelic's cosmic funk, Italian disco, and the genre-shredding late-night broadcasts of Detroit radio legend <strong>The Electrifying Mojo</strong>.</p>
+            <p>Living in the shadow of a collapsing auto industry, they imagined a music made <em>by</em> machines <em>about</em> a machine future — Atkins famously described early tracks as sounding like "George Clinton and Kraftwerk stuck in an elevator." Under names like Cybotron, Model 500, Rhythim Is Rhythim, and Inner City, they built cold, funky, forward-tilting records that a British compilation in 1988 would package under a single word borrowed from Atkins: <strong>techno</strong>.</p>
+            <p>The irony is durable: techno was born in Black America but found its first mass audience in Europe, where Detroit producers were treated as visionary artists years before their home country noticed. That transatlantic feedback loop — Detroit → Berlin → the world → back to Detroit — still defines the genre's geography today.</p>
+            <p>Every four-on-the-floor kick in this site's "Rust Belt Ritual" and "Warehouse Jack" sessions traces a direct line back to three teenagers in Belleville deciding the future should have a soundtrack.</p>
+        `
     }
 ];
 
